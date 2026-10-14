@@ -1,5 +1,7 @@
 package io.github.fvory.psdk.event
 
+import io.github.fvory.psdk.model.SignatureItem
+
 /**
  * Events emitted by the viewer, mirroring the web SDK event names.
  * Listeners are always called on the main thread, in the order the events happen.
@@ -25,6 +27,29 @@ public sealed interface PsdkEvent {
             API,
         }
     }
+
+    /** A signature was placed, from the picker or `placeSignature` (web: `signaturePlaced`). */
+    public data class SignaturePlaced(
+        public val item: SignatureItem,
+    ) : PsdkEvent
+
+    /** An E-Materai was placed (web: `eStampPlaced`). */
+    public data class EStampPlaced(
+        public val item: SignatureItem,
+    ) : PsdkEvent
+
+    /**
+     * An item was moved or resized and the finger was lifted, or its image loaded and set its
+     * height (web: `signatureMoved`). Sent for signatures and E-Materai.
+     */
+    public data class SignatureMoved(
+        public val item: SignatureItem,
+    ) : PsdkEvent
+
+    /** An item was deleted with its ✕ button or `removeSignature` (web: `signatureRemoved`). */
+    public data class SignatureRemoved(
+        public val id: String,
+    ) : PsdkEvent
 
     /**
      * All signatures and E-Materai were removed (web: `signaturesCleared`).

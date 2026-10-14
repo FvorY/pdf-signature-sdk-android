@@ -7,6 +7,14 @@ project uses [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Signatures and E-Materai (M2): `placeSignature`, `placeEStamp`, `removeSignature`, `clearSignatures`,
+  `getSignatures`, `getSignaturesByPage`, `renderPageWithOverlay`; events `signaturePlaced`,
+  `eStampPlaced`, `signatureMoved`, `signatureRemoved`.
+- Drag, resize and delete on the page with the web SDK's lock rules (`disabled`, `disableDragging`,
+  `disableDrag`, `disableResize`, per-item `locked`/`disable*`), plus `estampKeepAspectRatio`.
+- Item images from URL, Base64, bitmap or drawable; the height follows the image like the web SDK.
+- `SignatureItem.toJsonString()` / `toJsonArray()` with the web SDK's JSON format.
+- Web parity fixtures and a headless-Chrome runner for the real web SDK (`parity/`).
 - `PdfSignatureViewer` (M1): `loadDocument` from file, `Uri`, URL (with headers), bytes or asset;
   `nextPage`/`prevPage`/`goToPage`, `setPaginationLocked`, `setScale`, `fitToScreen`, `fitToWidth`,
   `getPageSize`, `renderPage`, `on`/`once`/`off`, `events` flow, `state` flow, `destroy`.

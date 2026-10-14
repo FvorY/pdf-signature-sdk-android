@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>PSDK parity runner</title>
+  <style>
+    html, body { margin: 0; }
+    #viewer { width: 1000px; height: 1400px; }
+  </style>
+</head>
+<body>
+<div id="viewer"></div>
+<script type="module">
+  import { createViewer } from './node_modules/pdf-signature-esign-sdk/dist/pdf-signature-sdk.js';
+
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  // A page's canvas keeps the browser default 300x150 until the SDK renders it. Placing an item
+  // with the default (centered) position before that uses the wrong size, so wait for it.
+  async function waitRendered(viewer, page) {
+    for (let i = 0; i < 200; i++) {
+      const canvas = viewer.getCanvas(page);
+      if (canvas && canvas.width > 0 && !(canvas.width === 300 && canvas.height === 150)) {
+        await sleep(50);
+        return canvas;
+      }
+      await sleep(25);
+    }
+    throw new Error(`Page ${page} was not rendered`);
+  }
+
+  window.runParity = async (pdfUrl, config) => {
+    try {
+      return await runAll(pdfUrl, config);
+    } catch (error) {
+      throw new Error(`${error.message}\n${error.stack}`);
+    }
+  };
+
+  async function runAll(pdfUrl, config) {
+    // Pass a selector: the SDK's deep config merge breaks HTMLElement containers (web SDK 1.1.2 bug).
+    const container = '#viewer';
+    const output = { pdf: pdfUrl, scale: config.scale, pageSizes: [], scenarios: {} };
+
+    for (const scenario of config.scenarios) {
+      const viewer = createViewer({ container, scale: config.scale, theme: 'light' });
+      await viewer.loadDocument(pdfUrl);
+      await waitRendered(viewer, 1);
+      for (const action of scenario.actions) {
+        if (action.op === 'goToPage') {
+          viewer.goToPage(action.page);
+          await waitRendered(viewer, action.page);
+        } else if (action.op === 'placeSignature') {
+          viewer.placeSignature({ ...action.opts });
+        } else if (action.op === 'placeEStamp') {
+          viewer.placeEStamp({ ...action.opts });
+        } else {
+          throw new Error(`Unknown op ${action.op}`);
+        }
+      }
+      output.scenarios[scenario.name] = viewer.getSignatures().map(({ id, ...item }) => item);
+
+      if (output.pageSizes.length === 0) {
+        for (let page = 1; page <= viewer.totalPages; page++) {
+          viewer.goToPage(page);
+          const canvas = await waitRendered(viewer, page);
+          output.pageSizes.push([canvas.width / config.scale, canvas.height / config.scale]);
+        }
+      }
+      // destroy() throws while thumbnails are still rendering (pdf.js 4 RenderTask.cancel() returns
+      // undefined, web SDK 1.1.2 calls .catch on it), so give them time and clean up by hand if needed.
+      await sleep(500);
+      try {
+        await viewer.destroy();
+      } catch {
+        document.querySelector(container).innerHTML = '';
+      }
+    }
+    return output;
+  }
+  window.parityReady = true;
+</script>
+</body>
+</html>

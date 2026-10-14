@@ -16,6 +16,19 @@ public data class PsdkConfig(
      * The web SDK defaults to 1.5; coordinates do not depend on the zoom.
      */
     public val scale: Float? = null,
+    /** Turns off every button, the thumbnails and touching items. API methods keep working (B-LCK-05). */
+    public val disabled: Boolean = false,
+    /** Locks moving and resizing of all items. The delete button stays active. */
+    public val disableDragging: Boolean = false,
+    /** Locks moving of all items; resizing still works. Prefer [disableDragging] (the web SDK marks this deprecated). */
+    public val disableDrag: Boolean = false,
+    /** Hides the resize handle of all items; moving still works. */
+    public val disableResize: Boolean = false,
+    /**
+     * Keep an E-Materai's aspect ratio while resizing. Off by default: like the web SDK, width and
+     * height change independently and the height follows the image when it loads.
+     */
+    public val estampKeepAspectRatio: Boolean = false,
     /**
      * When `setPaginationLocked(true)` is active, also stop the user from scrolling to other pages.
      * Off by default, like the web SDK, where only the buttons, page input and thumbnails are locked.
@@ -28,6 +41,8 @@ public data class PsdkConfig(
 
 public data class PsdkUiConfig(
     public val viewer: ViewerUiConfig = ViewerUiConfig(),
+    /** Short vibration when an item starts moving or is deleted. */
+    public val haptics: Boolean = true,
 )
 
 public data class ViewerUiConfig(
