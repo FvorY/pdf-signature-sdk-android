@@ -1,0 +1,13 @@
+{
+  "name": "psdk-parity-web",
+  "private": true,
+  "type": "module",
+  "description": "Runs the web SDK on the parity fixtures and writes the expected JSON.",
+  "scripts": {
+    "expected": "node run.mjs"
+  },
+  "dependencies": {
+    "pdf-signature-esign-sdk": "1.1.2",
+    "puppeteer-core": "24.10.0"
+  }
+}

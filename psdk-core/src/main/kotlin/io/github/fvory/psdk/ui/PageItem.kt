@@ -1,5 +1,6 @@
 package io.github.fvory.psdk.ui
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -25,10 +26,12 @@ import androidx.compose.ui.unit.dp
 import io.github.fvory.psdk.PdfSignatureViewer
 import io.github.fvory.psdk.engine.RenderSize
 import io.github.fvory.psdk.model.PageSize
+import io.github.fvory.psdk.model.SignatureItem
 
 /**
  * One page: a white sheet sized to the page in points × scale, with the rendered bitmap on top.
  * After a zoom the previous bitmap stays visible (stretched) until the sharp one is ready (R7).
+ * The page's signatures and E-Materai are drawn on top by [OverlayLayer].
  */
 @Composable
 internal fun PageItem(
@@ -37,6 +40,8 @@ internal fun PageItem(
     size: PageSize,
     scale: Float,
     documentId: Long,
+    items: List<SignatureItem>,
+    itemBitmaps: Map<String, Bitmap>,
 ) {
     val density = LocalDensity.current.density
     val pixels = remember(size, scale, density) { RenderSize.compute(size.width, size.height, scale, density) }
@@ -63,5 +68,6 @@ internal fun PageItem(
                 filterQuality = FilterQuality.Medium,
             )
         }
+        OverlayLayer(viewer, page, size, scale, items, itemBitmaps)
     }
 }

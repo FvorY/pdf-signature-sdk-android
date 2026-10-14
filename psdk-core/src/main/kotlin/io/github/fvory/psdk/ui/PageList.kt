@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -68,6 +69,8 @@ internal fun PageList(
     var pinchZoom by remember { mutableFloatStateOf(1f) }
     var pinchCentroid by remember { mutableStateOf(Offset.Zero) }
     val scale = state.scale
+    val itemBitmaps by viewer.itemBitmaps.collectAsState()
+    val itemsByPage = remember(state.signatures) { state.signatures.groupBy { it.page } }
 
     /** Applies [target] and scrolls so the content under [focal] (px in this view) stays there. */
     suspend fun zoomAround(
@@ -206,7 +209,16 @@ internal fun PageList(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 items(count = state.totalPages, key = { it }) { index ->
-                    PageItem(viewer, index + 1, state.pageSizes[index], scale, state.documentId)
+                    val page = index + 1
+                    PageItem(
+                        viewer = viewer,
+                        page = page,
+                        size = state.pageSizes[index],
+                        scale = scale,
+                        documentId = state.documentId,
+                        items = itemsByPage[page].orEmpty(),
+                        itemBitmaps = itemBitmaps,
+                    )
                 }
             }
         }

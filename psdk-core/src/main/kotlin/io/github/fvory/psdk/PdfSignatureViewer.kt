@@ -4,7 +4,12 @@ import android.content.Context
 import android.graphics.Bitmap
 import androidx.annotation.MainThread
 import io.github.fvory.psdk.cache.BitmapCache
+import io.github.fvory.psdk.cache.ImageLoader
 import io.github.fvory.psdk.config.PsdkConfig
+import io.github.fvory.psdk.core.GlobalLocks
+import io.github.fvory.psdk.core.IdGenerator
+import io.github.fvory.psdk.core.ItemBox
+import io.github.fvory.psdk.core.ItemStore
 import io.github.fvory.psdk.core.PaginationController
 import io.github.fvory.psdk.core.ZoomMath
 import io.github.fvory.psdk.engine.DocumentEngine
@@ -18,8 +23,12 @@ import io.github.fvory.psdk.event.EventBus
 import io.github.fvory.psdk.event.PsdkEvent
 import io.github.fvory.psdk.event.PsdkListener
 import io.github.fvory.psdk.event.PsdkSubscription
+import io.github.fvory.psdk.model.ItemType
 import io.github.fvory.psdk.model.PageSize
 import io.github.fvory.psdk.model.PdfSource
+import io.github.fvory.psdk.model.PlaceOptions
+import io.github.fvory.psdk.model.SignatureItem
+import io.github.fvory.psdk.ui.StaticOverlayPainter
 import io.github.fvory.psdk.util.Logger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -56,6 +65,14 @@ public class PdfSignatureViewer(
     private val pagination = PaginationController(::onPageChanged)
     private val mutableState = MutableStateFlow(PsdkState())
     private val mutableCommands = MutableSharedFlow<ViewerCommand>(extraBufferCapacity = 16)
+    private val imageLoader = ImageLoader(appContext)
+    private val mutableItemBitmaps = MutableStateFlow<Map<String, Bitmap>>(emptyMap())
+    private val store =
+        ItemStore(
+            ids = IdGenerator(),
+            onChanged = { items -> mutableState.update { it.copy(signatures = items) } },
+            emit = { bus.emit(it) },
+        )
 
     private var engine: DocumentEngine? = null
     private var loadToken = 0L
@@ -74,6 +91,9 @@ public class PdfSignatureViewer(
     public val events: SharedFlow<PsdkEvent> = bus.flow
 
     internal val commands: SharedFlow<ViewerCommand> = mutableCommands.asSharedFlow()
+
+    /** Loaded item images by item id. */
+    internal val itemBitmaps: StateFlow<Map<String, Bitmap>> = mutableItemBitmaps.asStateFlow()
 
     // ── Getters (web parity) ─────────────────────────────────────────────
 
@@ -154,7 +174,7 @@ public class PdfSignatureViewer(
                 )
             }
             applyPendingFitWidth()
-            bus.emit(PsdkEvent.SignaturesCleared)
+            clearItems()
             bus.emit(PsdkEvent.DocumentLoaded(opened.pageCount))
         } catch (e: CancellationException) {
             throw e
@@ -245,6 +265,55 @@ public class PdfSignatureViewer(
         return current.render(page, pixels.width, pixels.height)
     }
 
+    // ── Signatures & E-Materai ──────────────────────────────────────────
+
+    /**
+     * Places a signature and returns its id (B-OVL-03…07). Without x/y it is centered on the page;
+     * without a page it goes on the current page. Sends `signaturePlaced`.
+     *
+     * @throws PsdkException.NotLoaded when no document is open.
+     * @throws PsdkException.InvalidPage when [PlaceOptions.page] does not exist.
+     */
+    @MainThread
+    public fun placeSignature(options: PlaceOptions = PlaceOptions()): String = place(ItemType.SIGNATURE, options)
+
+    /** Places an E-Materai and returns its id. Its label is always "E-Materai". Sends `eStampPlaced`. */
+    @MainThread
+    public fun placeEStamp(options: PlaceOptions = PlaceOptions()): String = place(ItemType.ESTAMP, options)
+
+    /** Removes one signature or E-Materai and sends `signatureRemoved`. Unknown ids are ignored. */
+    @MainThread
+    public fun removeSignature(id: String) {
+        if (isDestroyed) return
+        if (store.remove(id)) mutableItemBitmaps.update { it - id }
+    }
+
+    /** Removes every signature and E-Materai on every page. Always sends `signaturesCleared`. */
+    @MainThread
+    public fun clearSignatures() {
+        if (!isDestroyed) clearItems()
+    }
+
+    /** All placed items, in the order they were placed. Positions in PDF points. */
+    public fun getSignatures(): List<SignatureItem> = store.all()
+
+    /** Items on [page]. */
+    public fun getSignaturesByPage(page: Int = currentPage): List<SignatureItem> = store.byPage(page)
+
+    /**
+     * Renders [page] with its signatures and E-Materai drawn on top (without handles).
+     * Replaces the web SDK's `getOverlayCanvas(page)`.
+     */
+    public suspend fun renderPageWithOverlay(
+        page: Int = currentPage,
+        scale: Float = currentScale,
+    ): Bitmap {
+        val bitmap = renderPage(page, scale)
+        val pxPerPoint = (bitmap.width / getPageSize(page).width).toFloat()
+        StaticOverlayPainter.draw(android.graphics.Canvas(bitmap), store.byPage(page), mutableItemBitmaps.value, pxPerPoint)
+        return bitmap
+    }
+
     // ── Events ───────────────────────────────────────────────────────────
 
     /** Listens to events of [type] (web: `on(event, fn)`). Cancel the returned subscription to stop (web: `off`). */
@@ -281,12 +350,25 @@ public class PdfSignatureViewer(
         temp.deleteAll()
         pagination.reset()
         bus.clear()
+        store.clear()
+        mutableItemBitmaps.value = emptyMap()
         mutableState.value = PsdkState()
     }
 
     // ── Internal API for the Compose UI ─────────────────────────────────
 
     internal val labels get() = config.labels
+
+    internal val locks: GlobalLocks
+        get() = GlobalLocks(config.disabled, config.disableDragging, config.disableDrag, config.disableResize)
+
+    /** Commits a drag or resize from the overlay and sends `signatureMoved`. */
+    internal fun commitItemBox(
+        id: String,
+        box: ItemBox,
+    ) {
+        if (!isDestroyed) store.move(id, box)
+    }
 
     /**
      * Last scroll position of the page list. Kept here because the viewer outlives the Activity,
@@ -371,6 +453,41 @@ public class PdfSignatureViewer(
         mutableState.update { it.copy(scale = scale) }
     }
 
+    private fun place(
+        type: ItemType,
+        options: PlaceOptions,
+    ): String {
+        ensureAlive()
+        val sizes = mutableState.value.pageSizes
+        if (!isLoaded || sizes.isEmpty()) throw PsdkException.NotLoaded()
+        val page = options.page ?: currentPage
+        if (page !in 1..sizes.size) throw PsdkException.InvalidPage(page)
+        val item = store.place(type, options, page, sizes[page - 1])
+        options.image?.let { loadItemImage(item.id, it) }
+        return item.id
+    }
+
+    private fun loadItemImage(
+        id: String,
+        image: io.github.fvory.psdk.model.PsdkImage,
+    ) {
+        scope.launch {
+            val bitmap = imageLoader.load(image)
+            if (bitmap == null) {
+                logger.e("Could not load the image of item $id")
+                return@launch
+            }
+            if (store.get(id) == null) return@launch
+            mutableItemBitmaps.update { it + (id to bitmap) }
+            store.onImageLoaded(id, bitmap.width, bitmap.height)
+        }
+    }
+
+    private fun clearItems() {
+        store.clear()
+        mutableItemBitmaps.value = emptyMap()
+    }
+
     private fun currentPageSize(): PageSize? = mutableState.value.pageSizes.getOrNull(currentPage - 1)
 
     private fun closeEngine() {
@@ -385,6 +502,7 @@ public class PdfSignatureViewer(
     ) {
         closeEngine()
         pagination.setTotal(0)
+        clearItems()
         mutableState.update {
             it.copy(
                 isLoading = false,
