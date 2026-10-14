@@ -10,7 +10,8 @@ import kotlin.math.abs
 /**
  * On-device web parity check (spec §20): replays assets/parity/scenarios.json on the real
  * PdfRenderer and compares with the web SDK output in assets/parity/sample.json.
- * Returns one line per failure, or an empty list when everything matches.
+ * Returns one line per failure, or an empty list when everything matches. Ends with a freshly
+ * loaded sample.pdf, so no test items are left on the pages.
  */
 internal object ParityCheck {
     suspend fun run(
@@ -80,6 +81,8 @@ internal object ParityCheck {
                 }
             }
         }
+        // Leave a clean document: the last scenario places items on pages 2–5 only.
+        viewer.loadDocument(PdfSource.AssetSource("sample.pdf"))
         return failures
     }
 
