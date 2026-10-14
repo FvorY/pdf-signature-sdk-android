@@ -26,4 +26,19 @@ class ActivePageDetectorTest {
     fun keepsCurrentWhenNothingVisible() {
         assertEquals(7, ActivePageDetector.pick(emptyList(), 0, 1000, current = 7))
     }
+
+    @Test
+    fun shortLastPageBecomesActiveAtTheEnd() {
+        // Portrait page 4 fills most of the screen, landscape page 5 is shorter, list is at its end
+        val visible = listOf(VisiblePage(4, -300, 700), VisiblePage(5, 712, 1000))
+        assertEquals(4, ActivePageDetector.pick(visible, 0, 1000, current = 4, canScrollBackward = true, canScrollForward = true))
+        assertEquals(5, ActivePageDetector.pick(visible, 0, 1000, current = 4, canScrollBackward = true, canScrollForward = false))
+    }
+
+    @Test
+    fun allPagesFitOnScreenUsesTallestPart() {
+        // Nothing scrolls: do not jump to the last page
+        val visible = listOf(VisiblePage(1, 16, 516), VisiblePage(2, 528, 828))
+        assertEquals(1, ActivePageDetector.pick(visible, 0, 1000, current = 1, canScrollBackward = false, canScrollForward = false))
+    }
 }

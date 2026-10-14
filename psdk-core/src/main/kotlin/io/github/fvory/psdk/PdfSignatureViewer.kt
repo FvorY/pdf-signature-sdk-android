@@ -137,6 +137,7 @@ public class PdfSignatureViewer(
                 return
             }
             engine = opened
+            savedScroll = SavedScroll()
             val sizes = List(opened.pageCount) { opened.pageSize(it + 1) }
             pagination.setTotal(opened.pageCount)
             val initialScale = config.scale?.let(ZoomMath::clamp)
@@ -287,6 +288,12 @@ public class PdfSignatureViewer(
 
     internal val labels get() = config.labels
 
+    /**
+     * Last scroll position of the page list. Kept here because the viewer outlives the Activity,
+     * so the list returns to the same place after rotation.
+     */
+    internal var savedScroll: SavedScroll = SavedScroll()
+
     internal fun onViewportChanged(
         width: Float,
         height: Float,
@@ -394,6 +401,12 @@ public class PdfSignatureViewer(
     private fun ensureAlive() {
         if (isDestroyed) throw PsdkException.Destroyed()
     }
+
+    internal data class SavedScroll(
+        val index: Int = 0,
+        val offset: Int = 0,
+        val horizontal: Int = 0,
+    )
 
     internal companion object {
         /** Space on the left and right of the pages, in dp. */

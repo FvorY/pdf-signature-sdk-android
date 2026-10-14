@@ -58,8 +58,9 @@ internal fun PageList(
     viewer: PdfSignatureViewer,
     state: PsdkState,
 ) {
-    val listState = remember(state.documentId) { LazyListState() }
-    val horizontalScroll = remember(state.documentId) { ScrollState(0) }
+    val listState =
+        remember(state.documentId) { LazyListState(viewer.savedScroll.index, viewer.savedScroll.offset) }
+    val horizontalScroll = remember(state.documentId) { ScrollState(viewer.savedScroll.horizontal) }
     val scope = rememberCoroutineScope()
     var programmaticScroll by remember { mutableStateOf(false) }
     var suppressDetectionUntil by remember { mutableLongStateOf(0L) }
@@ -120,14 +121,30 @@ internal fun PageList(
             }
         }
 
-        // Active page while the user scrolls (B-PG-04, B-PG-05)
+        // Active page while the user scrolls (B-PG-04, B-PG-05); also remembers the position for rotation
         LaunchedEffect(viewer, listState) {
             snapshotFlow { listState.layoutInfo }.collect { info ->
+                viewer.savedScroll =
+                    viewer.savedScroll.copy(
+                        index = listState.firstVisibleItemIndex,
+                        offset = listState.firstVisibleItemScrollOffset,
+                    )
                 if (programmaticScroll || pinching || SystemClock.uptimeMillis() < suppressDetectionUntil) return@collect
                 val visible = info.visibleItemsInfo.map { VisiblePage(it.index + 1, it.offset, it.offset + it.size) }
-                val page = ActivePageDetector.pick(visible, info.viewportStartOffset, info.viewportEndOffset, viewer.currentPage)
+                val page =
+                    ActivePageDetector.pick(
+                        visible = visible,
+                        viewportTop = info.viewportStartOffset,
+                        viewportBottom = info.viewportEndOffset,
+                        current = viewer.currentPage,
+                        canScrollBackward = listState.canScrollBackward,
+                        canScrollForward = listState.canScrollForward,
+                    )
                 viewer.onScrolledToPage(page)
             }
+        }
+        LaunchedEffect(viewer, horizontalScroll) {
+            snapshotFlow { horizontalScroll.value }.collect { viewer.savedScroll = viewer.savedScroll.copy(horizontal = it) }
         }
 
         val zoomGestures =
@@ -183,6 +200,7 @@ internal fun PageList(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.width(contentWidth).fillMaxHeight(),
+                userScrollEnabled = !(state.isPaginationLocked && viewer.config.lockScrollWhenPaginationLocked),
                 contentPadding = PaddingValues(vertical = VERTICAL_PADDING),
                 verticalArrangement = Arrangement.spacedBy(PAGE_GAP),
                 horizontalAlignment = Alignment.CenterHorizontally,

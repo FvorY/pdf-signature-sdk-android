@@ -16,6 +16,11 @@ public data class PsdkConfig(
      * The web SDK defaults to 1.5; coordinates do not depend on the zoom.
      */
     public val scale: Float? = null,
+    /**
+     * When `setPaginationLocked(true)` is active, also stop the user from scrolling to other pages.
+     * Off by default, like the web SDK, where only the buttons, page input and thumbnails are locked.
+     */
+    public val lockScrollWhenPaginationLocked: Boolean = false,
     public val labels: PsdkLabels = PsdkLabels(),
     public val ui: PsdkUiConfig = PsdkUiConfig(),
     public val logLevel: PsdkLogLevel = PsdkLogLevel.ERROR,

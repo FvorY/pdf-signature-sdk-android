@@ -13,6 +13,9 @@ project uses [Semantic Versioning](https://semver.org/).
 - Events `documentLoaded`, `pageChanged`, `signaturesCleared` with the web SDK's order and rules.
 - Compose UI: lazy page list, horizontal scroll for wide pages, pinch-to-zoom, double-tap zoom,
   empty state. `rememberPdfSignatureViewer` keeps the viewer across rotation.
+- `lockScrollWhenPaginationLocked` option: also blocks scrolling while pagination is locked (off by default, like the web SDK).
+- A short last page (e.g. landscape) becomes the active page when the list is scrolled to the end.
+- The page list keeps its scroll position across rotation.
 - `PsdkLabels` with English defaults and an Indonesian preset.
 - Sample app with a generated multi-page test PDF (`scripts/make_sample_pdf.py`).
 - Gradle project with `psdk-core`, optional `psdk-pdfium` and `sample` modules

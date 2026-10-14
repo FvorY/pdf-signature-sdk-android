@@ -60,7 +60,11 @@ class MainActivity : ComponentActivity() {
 private fun SampleScreen() {
     val viewer =
         rememberPdfSignatureViewer(
-            PsdkConfig(file = PdfSource.AssetSource("sample.pdf"), labels = PsdkLabels.indonesian()),
+            PsdkConfig(
+                file = PdfSource.AssetSource("sample.pdf"),
+                lockScrollWhenPaginationLocked = true,
+                labels = PsdkLabels.indonesian(),
+            ),
         )
     val state by viewer.state.collectAsState()
     val scope = rememberCoroutineScope()
