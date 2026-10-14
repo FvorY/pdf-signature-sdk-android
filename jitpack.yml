@@ -1,0 +1,6 @@
+# JitPack builds this file when someone requests a tag or commit.
+# It sets the GROUP and VERSION environment variables read by the module build files.
+jdk:
+  - openjdk17
+install:
+  - ./gradlew --no-daemon --no-configuration-cache :psdk-core:publishToMavenLocal :psdk-pdfium:publishToMavenLocal

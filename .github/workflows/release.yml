@@ -1,0 +1,35 @@
+name: Release
+
+# Runs when a semver tag (e.g. 1.0.0) is pushed: re-runs the checks, creates the
+# GitHub Release and asks JitPack to build the tag so the first user does not wait.
+on:
+  push:
+    tags: ['[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Check version matches the tag
+        run: |
+          grep -qx "VERSION_NAME=${GITHUB_REF_NAME}" gradle.properties \
+            || { echo "VERSION_NAME in gradle.properties != ${GITHUB_REF_NAME}"; exit 1; }
+      - name: Lint, test and build
+        run: ./gradlew ktlintCheck :psdk-core:testDebugUnitTest :psdk-core:assembleRelease :psdk-pdfium:assembleRelease
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes
+      - name: Trigger JitPack build
+        run: |
+          curl -s --max-time 900 \
+            "https://jitpack.io/api/builds/com.github.FvorY/pdf-signature-sdk-android/${GITHUB_REF_NAME}" || true
