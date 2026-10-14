@@ -7,6 +7,15 @@ project uses [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Viewer UI (M3): phone layout (top bar with ⋮ menu, bottom bar, floating page indicator, thumbnail
+  strip) and tablet layout (web-style toolbar, thumbnail sidebar), switching at 600 dp.
+- Signature and E-Materai pickers (`signatureOptions`, `estampOptions`, `groupByCategory`),
+  `openSignatureModal`, `openEStampModal`.
+- Light, dark and system themes with `PsdkColors` mapped from the web SDK CSS variables, `fontFamily`.
+- Upload button with the system file picker and `onUpload` (`UploadDecision`).
+- `updateConfig`, `showSkeleton`, status bar, "Clear All", 🔒 badge for encrypted PDFs, go-to-page dialog.
+- `ui.topbar.*`, `ui.sidebar.thumbnails`, `ui.statusbar`, `ui.layout` options.
+- `PdfSignatureView` for XML layouts.
 - Signatures and E-Materai (M2): `placeSignature`, `placeEStamp`, `removeSignature`, `clearSignatures`,
   `getSignatures`, `getSignaturesByPage`, `renderPageWithOverlay`; events `signaturePlaced`,
   `eStampPlaced`, `signatureMoved`, `signatureRemoved`.

@@ -5,7 +5,11 @@ import android.graphics.Bitmap
 import androidx.annotation.MainThread
 import io.github.fvory.psdk.cache.BitmapCache
 import io.github.fvory.psdk.cache.ImageLoader
+import io.github.fvory.psdk.config.PickerOption
 import io.github.fvory.psdk.config.PsdkConfig
+import io.github.fvory.psdk.config.PsdkThemeMode
+import io.github.fvory.psdk.config.SkeletonOptions
+import io.github.fvory.psdk.config.UploadDecision
 import io.github.fvory.psdk.core.GlobalLocks
 import io.github.fvory.psdk.core.IdGenerator
 import io.github.fvory.psdk.core.ItemBox
@@ -80,9 +84,18 @@ public class PdfSignatureViewer(
     private var viewportHeight = 0f
     private var fitWidthPending = false
 
-    /** Current configuration. */
-    public var config: PsdkConfig = config
-        private set
+    private val configState = MutableStateFlow(config)
+
+    /** Current configuration. Change it with [updateConfig]. */
+    public val config: PsdkConfig get() = configState.value
+
+    internal val configFlow: StateFlow<PsdkConfig> = configState.asStateFlow()
+
+    /** Which picker is open: SIGNATURE, ESTAMP or null. */
+    internal val picker = MutableStateFlow<ItemType?>(null)
+
+    /** Skeleton overlay options while it is shown, null when hidden. */
+    internal val skeleton = MutableStateFlow<SkeletonOptions?>(null)
 
     /** Observable snapshot of the viewer for Compose (`collectAsState`) and Flow users. */
     public val state: StateFlow<PsdkState> = mutableState.asStateFlow()
@@ -314,6 +327,52 @@ public class PdfSignatureViewer(
         return bitmap
     }
 
+    // ── Pickers, skeleton, config ───────────────────────────────────────
+
+    /**
+     * Opens the signature picker (web: `openSignatureModal`). Without `signatureOptions` it places a
+     * default signature right away (B-MOD-01). Does nothing when no document is loaded.
+     */
+    @MainThread
+    public fun openSignatureModal() {
+        openPicker(ItemType.SIGNATURE)
+    }
+
+    /** Opens the E-Materai picker, or places a default E-Materai when `estampOptions` is empty. */
+    @MainThread
+    public fun openEStampModal() {
+        openPicker(ItemType.ESTAMP)
+    }
+
+    /**
+     * Shows or hides a loading overlay over the viewer, e.g. while your backend signs the document.
+     * Pass [options] to change the background, blur or content.
+     */
+    @MainThread
+    public fun showSkeleton(
+        visible: Boolean,
+        options: SkeletonOptions? = null,
+    ) {
+        if (isDestroyed) return
+        skeleton.value = if (visible) options ?: SkeletonOptions() else null
+    }
+
+    /**
+     * Changes the configuration at runtime (web: `updateConfig`), e.g.
+     * `viewer.updateConfig { it.copy(disabled = true, theme = PsdkThemeMode.DARK) }`.
+     * Toolbar, labels, theme, locks and pickers update immediately; a new `scale` zooms (B-CFG-02).
+     */
+    @MainThread
+    public fun updateConfig(transform: (PsdkConfig) -> PsdkConfig) {
+        if (isDestroyed) return
+        val old = configState.value
+        val new = transform(old)
+        configState.value = new
+        logger.level = new.logLevel
+        val newScale = new.scale
+        if (newScale != null && newScale != old.scale) applyScale(ZoomMath.clamp(newScale), scrollToCurrentPage = true)
+    }
+
     // ── Events ───────────────────────────────────────────────────────────
 
     /** Listens to events of [type] (web: `on(event, fn)`). Cancel the returned subscription to stop (web: `off`). */
@@ -352,6 +411,8 @@ public class PdfSignatureViewer(
         bus.clear()
         store.clear()
         mutableItemBitmaps.value = emptyMap()
+        picker.value = null
+        skeleton.value = null
         mutableState.value = PsdkState()
     }
 
@@ -421,6 +482,48 @@ public class PdfSignatureViewer(
         }
     }
 
+    internal fun closePicker() {
+        picker.value = null
+    }
+
+    /** A picker option was chosen: close the picker and place it on the current page (B-MOD-05). */
+    internal fun choose(
+        type: ItemType,
+        option: PickerOption,
+    ) {
+        closePicker()
+        if (isDestroyed || !isLoaded) return
+        place(type, PlaceOptions(label = option.label, image = option.image))
+    }
+
+    /** Upload button flow (B-UPL-02/03): ask `onUpload`, then open the file. Errors are only logged. */
+    internal suspend fun handleUpload(picked: PdfSource) {
+        try {
+            val decision = config.onUpload?.invoke(picked) ?: UploadDecision.Proceed
+            when (decision) {
+                UploadDecision.Cancel -> return
+                UploadDecision.Proceed -> loadDocument(picked)
+                is UploadDecision.Replace -> loadDocument(decision.source)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logger.e("Upload failed", e)
+        }
+    }
+
+    /** Runs the upload flow in the viewer's scope, so it survives the UI being recreated. */
+    internal fun startUpload(picked: PdfSource) {
+        if (!isDestroyed) scope.launch { handleUpload(picked) }
+    }
+
+    internal suspend fun loadImage(image: io.github.fvory.psdk.model.PsdkImage): Bitmap? = imageLoader.load(image)
+
+    /** Theme button: switch between light and dark (B-TB-06). No event. */
+    internal fun toggleTheme(currentlyDark: Boolean) {
+        updateConfig { it.copy(theme = if (currentlyDark) PsdkThemeMode.LIGHT else PsdkThemeMode.DARK) }
+    }
+
     // ── Private ──────────────────────────────────────────────────────────
 
     private fun onPageChanged(
@@ -451,6 +554,16 @@ public class PdfSignatureViewer(
         val scale = fitToWidthScale() ?: return
         fitWidthPending = false
         mutableState.update { it.copy(scale = scale) }
+    }
+
+    private fun openPicker(type: ItemType) {
+        if (isDestroyed || !isLoaded) return
+        val options = if (type == ItemType.SIGNATURE) config.signatureOptions else config.estampOptions
+        if (options.isEmpty()) {
+            place(type, PlaceOptions())
+        } else {
+            picker.value = type
+        }
     }
 
     private fun place(
