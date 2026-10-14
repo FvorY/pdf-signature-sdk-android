@@ -1,0 +1,102 @@
+package io.github.fvory.psdk.config
+
+/**
+ * Every text shown by the viewer. Defaults are the web SDK's English texts; use [indonesian]
+ * for Bahasa Indonesia. Labels stored on items sent to the backend stay "Signature" and
+ * "E-Materai" in every language, like the web SDK.
+ *
+ * Texts containing `%d` / `%s` are format strings.
+ */
+public data class PsdkLabels(
+    // Labels the web SDK already lets you change
+    public val uploadBtn: String = "Open PDF",
+    public val signatureBtn: String = "Add Signature",
+    public val estampBtn: String = "E-Materai",
+    public val clearBtn: String = "Clear All",
+    public val signatureModalTitle: String = "Select Signature Role",
+    public val estampModalTitle: String = "Select E-Materai",
+    public val defaultGroup: String = "Umum",
+    public val passwordModalTitle: String = "Password Protected",
+    public val passwordModalDesc: String = "This document is encrypted. Please enter the password to view it.",
+    public val passwordPlaceholder: String = "Enter document password",
+    public val passwordIncorrect: String = "Incorrect password. Please try again.",
+    public val cancelBtn: String = "Cancel",
+    public val unlockBtn: String = "Unlock",
+    public val unlockingBtn: String = "Unlocking...",
+    // Texts fixed in the web SDK, configurable here
+    public val brandDefault: String = "PDF Viewer",
+    public val emptyTitle: String = "No Document Loaded",
+    public val emptySubtitle: String =
+        "Upload a PDF file to get started. You can also add signatures and e-materai stamps.",
+    public val sidebarTitle: String = "Pages",
+    public val thumbLabel: String = "Page %d",
+    public val statusReady: String = "Ready",
+    public val signatureCountOne: String = "%d signature",
+    public val signatureCountOther: String = "%d signatures",
+    public val securedBadge: String = "Password Protected (Encrypted)",
+    public val defaultSignatureLabel: String = "Signature",
+    public val defaultEStampLabel: String = "E-Materai",
+    public val zoomIn: String = "Zoom in",
+    public val zoomOut: String = "Zoom out",
+    public val fitToScreen: String = "Fit to screen",
+    public val prevPage: String = "Previous page",
+    public val nextPage: String = "Next page",
+    public val toggleTheme: String = "Toggle Theme",
+    // Mobile-only texts
+    public val goToPageTitle: String = "Go to page",
+    public val okBtn: String = "OK",
+    public val moreMenu: String = "More",
+    public val a11yItem: String = "%1\$s, page %2\$d",
+    public val a11yDelete: String = "Delete",
+    public val a11yResize: String = "Resize",
+    public val a11yMove: String = "Move",
+    public val a11yPage: String = "Page %1\$d of %2\$d",
+    public val errorLoad: String = "Failed to open document",
+) {
+    public companion object {
+        /** Bahasa Indonesia preset. */
+        public fun indonesian(): PsdkLabels =
+            PsdkLabels(
+                uploadBtn = "Buka PDF",
+                signatureBtn = "Tambah Tanda Tangan",
+                estampBtn = "E-Materai",
+                clearBtn = "Hapus Semua",
+                signatureModalTitle = "Pilih Peran Penanda Tangan",
+                estampModalTitle = "Pilih E-Materai",
+                defaultGroup = "Umum",
+                passwordModalTitle = "Dilindungi Kata Sandi",
+                passwordModalDesc = "Dokumen ini terenkripsi. Masukkan kata sandi untuk membukanya.",
+                passwordPlaceholder = "Masukkan kata sandi dokumen",
+                passwordIncorrect = "Kata sandi salah. Silakan coba lagi.",
+                cancelBtn = "Batal",
+                unlockBtn = "Buka",
+                unlockingBtn = "Membuka...",
+                brandDefault = "PDF Viewer",
+                emptyTitle = "Belum Ada Dokumen",
+                emptySubtitle = "Buka file PDF untuk memulai. Anda juga dapat menambahkan tanda tangan dan e-materai.",
+                sidebarTitle = "Halaman",
+                thumbLabel = "Halaman %d",
+                statusReady = "Siap",
+                signatureCountOne = "%d tanda tangan",
+                signatureCountOther = "%d tanda tangan",
+                securedBadge = "Dilindungi Kata Sandi (Terenkripsi)",
+                defaultSignatureLabel = "Tanda Tangan",
+                defaultEStampLabel = "E-Materai",
+                zoomIn = "Perbesar",
+                zoomOut = "Perkecil",
+                fitToScreen = "Sesuaikan layar",
+                prevPage = "Halaman sebelumnya",
+                nextPage = "Halaman berikutnya",
+                toggleTheme = "Ganti Tema",
+                goToPageTitle = "Ke halaman",
+                okBtn = "OK",
+                moreMenu = "Lainnya",
+                a11yItem = "%1\$s, halaman %2\$d",
+                a11yDelete = "Hapus",
+                a11yResize = "Ubah ukuran",
+                a11yMove = "Pindahkan",
+                a11yPage = "Halaman %1\$d dari %2\$d",
+                errorLoad = "Gagal membuka dokumen",
+            )
+    }
+}

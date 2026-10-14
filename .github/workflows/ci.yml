@@ -27,6 +27,12 @@ jobs:
         run: ./gradlew :psdk-core:assembleRelease :psdk-pdfium:assembleRelease :sample:assembleDebug
       - name: Publish to Maven Local (same step JitPack runs)
         run: ./gradlew :psdk-core:publishToMavenLocal :psdk-pdfium:publishToMavenLocal
+      - name: Upload sample APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sample-debug-apk
+          path: sample/build/outputs/apk/debug/sample-debug.apk
+          retention-days: 14
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v4
