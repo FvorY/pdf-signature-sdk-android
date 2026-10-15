@@ -13,6 +13,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 24
         consumerProguardFiles("consumer-rules.pro")
     }
@@ -38,6 +39,8 @@ kotlin {
 }
 
 dependencies {
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
     api(project(":psdk-core"))
     implementation("io.legere:pdfiumandroid:2.0.1")
 }

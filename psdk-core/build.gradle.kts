@@ -14,6 +14,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 24
         consumerProguardFiles("consumer-rules.pro")
         buildConfigField("String", "SDK_VERSION", "\"$sdkVersion\"")
@@ -51,6 +52,8 @@ kotlin {
 }
 
 dependencies {
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
     api(platform(libs.compose.bom))
     api(libs.compose.ui)
     implementation(libs.compose.foundation)

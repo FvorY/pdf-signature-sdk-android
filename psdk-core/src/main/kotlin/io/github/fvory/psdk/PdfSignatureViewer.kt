@@ -574,6 +574,23 @@ public class PdfSignatureViewer internal constructor(
         }
     }
 
+    /** Sharp detail for the visible part of a page at high zoom; null when unsupported or closed. */
+    internal suspend fun renderDetail(
+        page: Int,
+        full: io.github.fvory.psdk.engine.PixelSize,
+        region: io.github.fvory.psdk.engine.PixelRect,
+    ): Bitmap? {
+        val current = engine ?: return null
+        return try {
+            current.renderRegion(page, full.width, full.height, region.left, region.top, region.width, region.height)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logger.e("Rendering detail of page $page failed", e)
+            null
+        }
+    }
+
     internal fun closePicker() {
         picker.value = null
     }

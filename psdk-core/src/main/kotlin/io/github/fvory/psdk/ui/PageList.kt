@@ -29,9 +29,12 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
@@ -94,7 +97,9 @@ internal fun PageList(
         horizontalScroll.scrollTo(horizontalOffset.coerceIn(0, horizontalScroll.maxValue))
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize()) {
+    // Viewport in window coordinates, for the sharp detail of pages at high zoom
+    val viewport = remember { mutableStateOf<Rect?>(null) }
+    BoxWithConstraints(Modifier.fillMaxSize().onGloballyPositioned { viewport.value = it.boundsInWindow() }) {
         val viewportWidth = maxWidth
         val viewportHeight = maxHeight
         LaunchedEffect(viewportWidth, viewportHeight) {
@@ -221,6 +226,8 @@ internal fun PageList(
                         documentId = state.documentId,
                         items = itemsByPage[page].orEmpty(),
                         itemBitmaps = itemBitmaps,
+                        viewport = viewport,
+                        detailAllowed = !pinching,
                     )
                 }
             }

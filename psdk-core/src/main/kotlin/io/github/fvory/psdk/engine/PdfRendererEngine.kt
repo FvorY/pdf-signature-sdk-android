@@ -3,6 +3,7 @@ package io.github.fvory.psdk.engine
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.pdf.LoadParams
 import android.graphics.pdf.PdfRenderer
 import android.graphics.pdf.PdfRendererPreV
@@ -62,6 +63,32 @@ internal class PdfRendererEngine private constructor(
             }
         }
 
+    override suspend fun renderRegion(
+        page: Int,
+        fullWidth: Int,
+        fullHeight: Int,
+        left: Int,
+        top: Int,
+        width: Int,
+        height: Int,
+    ): Bitmap =
+        withContext(renderDispatcher) {
+            mutex.withLock {
+                if (closed) throw PsdkException.NotLoaded()
+                val size = sizes[page - 1]
+                // Same mapping the renderer uses for a whole page (points → pixels), shifted to the region
+                val matrix =
+                    Matrix().apply {
+                        setScale((fullWidth / size.width).toFloat(), (fullHeight / size.height).toFloat())
+                        postTranslate(-left.toFloat(), -top.toFloat())
+                    }
+                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                bitmap.eraseColor(Color.WHITE)
+                renderer.render(page - 1, bitmap, matrix)
+                bitmap
+            }
+        }
+
     override fun close() {
         closeScope.launch {
             mutex.withLock {
@@ -82,6 +109,7 @@ internal class PdfRendererEngine private constructor(
         fun render(
             index: Int,
             bitmap: Bitmap,
+            transform: Matrix? = null,
         )
     }
 
@@ -95,8 +123,9 @@ internal class PdfRendererEngine private constructor(
         override fun render(
             index: Int,
             bitmap: Bitmap,
+            transform: Matrix?,
         ) {
-            renderer.openPage(index).use { it.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY) }
+            renderer.openPage(index).use { it.render(bitmap, null, transform, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY) }
         }
 
         override fun close() {
@@ -115,9 +144,10 @@ internal class PdfRendererEngine private constructor(
         override fun render(
             index: Int,
             bitmap: Bitmap,
+            transform: Matrix?,
         ) {
             renderer.openPage(index).use {
-                it.render(bitmap, null, null, RenderParams.Builder(RenderParams.RENDER_MODE_FOR_DISPLAY).build())
+                it.render(bitmap, null, transform, RenderParams.Builder(RenderParams.RENDER_MODE_FOR_DISPLAY).build())
             }
         }
 

@@ -2,6 +2,8 @@ package io.github.fvory.psdk.pdfium
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Matrix
+import android.graphics.RectF
 import android.os.ParcelFileDescriptor
 import io.github.fvory.psdk.engine.DocumentEngine
 import io.github.fvory.psdk.model.PageSize
@@ -112,6 +114,33 @@ private class PdfiumDocumentEngine(
                 bitmap.eraseColor(Color.WHITE)
                 (document.openPage(page - 1) ?: throw IOException("Unable to open page $page")).use { opened ->
                     opened.renderPageBitmap(bitmap, 0, 0, width, height)
+                }
+                bitmap
+            }
+        }
+
+    override suspend fun renderRegion(
+        page: Int,
+        fullWidth: Int,
+        fullHeight: Int,
+        left: Int,
+        top: Int,
+        width: Int,
+        height: Int,
+    ): Bitmap =
+        withContext(PdfiumEngine.dispatcher) {
+            mutex.withLock {
+                check(!closed) { "Pdfium document is closed" }
+                val size = sizes[page - 1]
+                val matrix =
+                    Matrix().apply {
+                        setScale((fullWidth / size.width).toFloat(), (fullHeight / size.height).toFloat())
+                        postTranslate(-left.toFloat(), -top.toFloat())
+                    }
+                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                bitmap.eraseColor(Color.WHITE)
+                (document.openPage(page - 1) ?: throw IOException("Unable to open page $page")).use { opened ->
+                    opened.renderPageBitmap(bitmap, matrix, RectF(0f, 0f, width.toFloat(), height.toFloat()))
                 }
                 bitmap
             }

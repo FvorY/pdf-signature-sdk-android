@@ -22,6 +22,21 @@ public interface DocumentEngine {
         height: Int,
     ): Bitmap
 
+    /**
+     * Renders only [region] of [page] as if the whole page were drawn at [fullWidth] × [fullHeight] px.
+     * The bitmap is [region]-sized with a white background. Used for sharp detail at high zoom;
+     * null when the engine cannot do it.
+     */
+    public suspend fun renderRegion(
+        page: Int,
+        fullWidth: Int,
+        fullHeight: Int,
+        left: Int,
+        top: Int,
+        width: Int,
+        height: Int,
+    ): Bitmap? = null
+
     /** Releases the document. Safe to call while a render is running and more than once. */
     public fun close()
 }
