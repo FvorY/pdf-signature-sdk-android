@@ -42,7 +42,8 @@ try {
   await mkdir(join(parityDir, 'expected'), { recursive: true });
 
   for (const pdf of config.pdfs) {
-    const result = await page.evaluate((url, cfg) => window.runParity(url, cfg), `${base}/pdfs/${pdf}`, config);
+    const forPdf = { ...config, scenarios: config.scenarios.filter((s) => !s.only || s.only.includes(pdf)) };
+    const result = await page.evaluate((url, cfg) => window.runParity(url, cfg), `${base}/pdfs/${pdf}`, forPdf);
     result.pdf = pdf;
     result.webSdkVersion = '1.1.2';
     const target = join(parityDir, 'expected', pdf.replace(/\.pdf$/, '.json'));

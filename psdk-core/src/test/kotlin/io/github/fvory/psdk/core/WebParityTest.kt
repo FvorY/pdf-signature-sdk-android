@@ -30,6 +30,7 @@ class WebParityTest {
             val scenarios = config.getJSONArray("scenarios")
             for (s in 0 until scenarios.length()) {
                 val scenario = scenarios.getJSONObject(s)
+                if (!runsFor(scenario, pdf)) continue
                 val name = scenario.getString("name")
                 val actual =
                     replay(scenario.getJSONArray("actions")) { page -> sizes[page - 1].let { PageSize(it.getDouble(0), it.getDouble(1)) } }
@@ -44,7 +45,16 @@ class WebParityTest {
     fun sampleAppCopyIsUpToDate() {
         val copy = File("../sample/src/main/assets/parity")
         assertEquals(File(parityDir, "scenarios.json").readText(), File(copy, "scenarios.json").readText())
-        assertEquals(File(parityDir, "expected/sample.json").readText(), File(copy, "sample.json").readText())
+        val pdfs = config.getJSONArray("pdfs")
+        for (p in 0 until pdfs.length()) {
+            val name = pdfs.getString(p).removeSuffix(".pdf")
+            assertEquals(File(parityDir, "expected/$name.json").readText(), File(copy, "$name.json").readText())
+            assertEquals(
+                "sample app asset $name.pdf",
+                File(parityDir, "pdfs/$name.pdf").readBytes().toList(),
+                File("../sample/src/main/assets/$name.pdf").readBytes().toList(),
+            )
+        }
     }
 
     private fun replay(
@@ -84,6 +94,15 @@ class WebParityTest {
     }
 
     companion object {
+        /** Scenarios with an "only" list run for those PDFs only. */
+        fun runsFor(
+            scenario: JSONObject,
+            pdf: String,
+        ): Boolean {
+            val only = scenario.optJSONArray("only") ?: return true
+            return (0 until only.length()).any { only.getString(it) == pdf }
+        }
+
         fun parseOptions(json: JSONObject): PlaceOptions =
             PlaceOptions(
                 x = json.optDoubleOrNull("x"),

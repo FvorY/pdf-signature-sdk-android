@@ -7,6 +7,9 @@ project uses [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Geometry parity fixtures (M4): `parity/pdfs/geometry.pdf` with /Rotate 0/90/180/270, CropBox
+  offsets and a MediaBox not at 0,0, plus scenarios limited with `"only"`. Page sizes and item
+  positions match the web SDK on a device (PdfRenderer honours CropBox and /Rotate like pdf.js).
 - Process-death restore (M4): `rememberPdfSignatureViewer` saves a small snapshot (document copy
   path, page, zoom, scroll, page lock, items) and item images as PNG files in the cache, so the
   viewer comes back as it was after Android kills the app in the background. Restored items send
