@@ -15,6 +15,11 @@ public enum class PsdkThemeMode {
  * Color tokens, mapped from the web SDK's `--psdk-*` CSS variables (spec §12).
  * Start from [light] or [dark] and change what you need with `copy(...)`.
  * PDF pages are always drawn on white.
+ *
+ * The defaults are the web SDK colors adjusted to pass WCAG AA (4.5:1) for text (B-A11Y-04):
+ * light accent #14A1C5 → #0E7C99 and danger #EF4444 → #DC2626; dark muted text #5A6070 → #848BA0,
+ * dark danger → #F26B6B, and dark buttons use dark text. [webLight] and [webDark] give the exact
+ * web colors.
  */
 public data class PsdkColors(
     /** `--psdk-bg-base`: behind the pages. */
@@ -36,6 +41,8 @@ public data class PsdkColors(
     public val onAccent: Color,
     /** `--psdk-danger`: delete buttons, E-Materai placeholders. */
     public val danger: Color,
+    /** Text and icons on [danger]. */
+    public val onDanger: Color,
     public val dangerSubtle: Color,
     public val success: Color,
     public val warning: Color,
@@ -44,7 +51,29 @@ public data class PsdkColors(
     public val textMuted: Color,
 ) {
     public companion object {
+        /** Light theme, WCAG AA. */
         public fun light(): PsdkColors =
+            webLight().copy(
+                accent = Color(0xFF0E7C99),
+                accentPressed = Color(0xFF0B6680),
+                accentSubtle = Color(0x1F0E7C99),
+                danger = Color(0xFFDC2626),
+                dangerSubtle = Color(0x1FDC2626),
+            )
+
+        /** Dark theme, WCAG AA. */
+        public fun dark(): PsdkColors =
+            webDark().copy(
+                onAccent = Color(0xFF0F1117),
+                accentPressed = Color(0xFF3BB4D3),
+                danger = Color(0xFFF26B6B),
+                dangerSubtle = Color(0x1FF26B6B),
+                onDanger = Color(0xFF0F1117),
+                textMuted = Color(0xFF848BA0),
+            )
+
+        /** The web SDK's light colors, unchanged. */
+        public fun webLight(): PsdkColors =
             PsdkColors(
                 background = Color(0xFFF8FAFC),
                 surface = Color(0xFFFFFFFF),
@@ -57,6 +86,7 @@ public data class PsdkColors(
                 accentSubtle = Color(0x1F14A1C5),
                 onAccent = Color(0xFFFFFFFF),
                 danger = Color(0xFFEF4444),
+                onDanger = Color(0xFFFFFFFF),
                 dangerSubtle = Color(0x1FEF4444),
                 success = Color(0xFF22C55E),
                 warning = Color(0xFFF59E0B),
@@ -65,8 +95,9 @@ public data class PsdkColors(
                 textMuted = Color(0xFF64748B),
             )
 
-        public fun dark(): PsdkColors =
-            light().copy(
+        /** The web SDK's dark colors, unchanged. */
+        public fun webDark(): PsdkColors =
+            webLight().copy(
                 background = Color(0xFF0F1117),
                 surface = Color(0xFF1A1D27),
                 surfaceElevated = Color(0xFF22263A),

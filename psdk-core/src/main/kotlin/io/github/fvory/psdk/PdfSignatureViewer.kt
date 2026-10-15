@@ -14,13 +14,15 @@ import io.github.fvory.psdk.config.UploadDecision
 import io.github.fvory.psdk.core.GlobalLocks
 import io.github.fvory.psdk.core.IdGenerator
 import io.github.fvory.psdk.core.ItemBox
+import io.github.fvory.psdk.core.ItemGeometry
 import io.github.fvory.psdk.core.ItemStore
+import io.github.fvory.psdk.core.LockRules
 import io.github.fvory.psdk.core.PaginationController
 import io.github.fvory.psdk.core.ZoomMath
 import io.github.fvory.psdk.engine.DocumentEngine
+import io.github.fvory.psdk.engine.EngineRegistry
 import io.github.fvory.psdk.engine.PasswordFlow
 import io.github.fvory.psdk.engine.PasswordRequiredException
-import io.github.fvory.psdk.engine.PdfRendererEngine
 import io.github.fvory.psdk.engine.RenderSize
 import io.github.fvory.psdk.engine.SourceResolver
 import io.github.fvory.psdk.engine.TempFileManager
@@ -33,6 +35,7 @@ import io.github.fvory.psdk.model.ItemType
 import io.github.fvory.psdk.model.PageSize
 import io.github.fvory.psdk.model.PdfSource
 import io.github.fvory.psdk.model.PlaceOptions
+import io.github.fvory.psdk.model.PsdkImage
 import io.github.fvory.psdk.model.SignatureItem
 import io.github.fvory.psdk.state.ViewerSnapshot
 import io.github.fvory.psdk.ui.StaticOverlayPainter
@@ -193,10 +196,10 @@ public class PdfSignatureViewer internal constructor(
             it.copy(isLoading = true, isLoaded = false, pageSizes = emptyList(), error = null, isPasswordProtected = false)
         }
         try {
-            val file = resolver.resolve(source)
+            val file = resolver.resolve(source, config.allowInsecureHttp)
             val opened =
                 PasswordFlow.open(
-                    open = { password -> PdfRendererEngine.open(file, password) },
+                    open = { password -> EngineRegistry.open(file, password) },
                     ask = { isIncorrect -> askPassword(token, isIncorrect) },
                 )
             passwordPrompt.value = null
@@ -474,6 +477,29 @@ public class PdfSignatureViewer internal constructor(
     internal val locks: GlobalLocks
         get() = GlobalLocks(config.disabled, config.disableDragging, config.disableDrag, config.disableResize)
 
+    /** Accessibility "move" action (B-A11Y-02): same lock rules as dragging, sends `signatureMoved`. */
+    internal fun nudgeItem(
+        id: String,
+        dx: Double,
+        dy: Double,
+    ) {
+        val item = store.get(id) ?: return
+        if (isDestroyed || !LockRules.canDrag(locks, item)) return
+        val page = mutableState.value.pageSizes.getOrNull(item.page - 1) ?: return
+        store.move(id, ItemGeometry.nudge(ItemBox(item.x, item.y, item.width, item.height), dx, dy, page.width, page.height))
+    }
+
+    /** Accessibility "bigger/smaller" action: same lock rules as the resize handle. */
+    internal fun scaleItem(
+        id: String,
+        factor: Double,
+    ) {
+        val item = store.get(id) ?: return
+        if (isDestroyed || !LockRules.canResize(locks, item)) return
+        val page = mutableState.value.pageSizes.getOrNull(item.page - 1) ?: return
+        store.move(id, ItemGeometry.scaleBy(ItemBox(item.x, item.y, item.width, item.height), factor, page.width, page.height))
+    }
+
     /** Commits a drag or resize from the overlay and sends `signatureMoved`. */
     internal fun commitItemBox(
         id: String,
@@ -595,7 +621,7 @@ public class PdfSignatureViewer internal constructor(
         if (!isDestroyed) scope.launch { handleUpload(picked) }
     }
 
-    internal suspend fun loadImage(image: io.github.fvory.psdk.model.PsdkImage): Bitmap? = imageLoader.load(image)
+    internal suspend fun loadImage(image: PsdkImage): Bitmap? = imageLoader.load(image, config.allowInsecureHttp)
 
     /** Theme button: switch between light and dark (B-TB-06). No event. */
     internal fun toggleTheme(currentlyDark: Boolean) {
@@ -690,7 +716,7 @@ public class PdfSignatureViewer internal constructor(
         image: io.github.fvory.psdk.model.PsdkImage,
     ) {
         scope.launch {
-            val bitmap = imageLoader.load(image)
+            val bitmap = imageLoader.load(image, config.allowInsecureHttp)
             if (bitmap == null) {
                 logger.e("Could not load the image of item $id")
                 return@launch

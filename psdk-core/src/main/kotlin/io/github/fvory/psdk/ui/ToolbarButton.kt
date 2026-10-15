@@ -46,7 +46,7 @@ internal fun ToolbarButton(
     val (baseBackground, baseForeground) =
         when (kind) {
             ButtonKind.ACCENT -> colors.accent to colors.onAccent
-            ButtonKind.DANGER -> colors.danger to Color.White
+            ButtonKind.DANGER -> colors.danger to colors.onDanger
             ButtonKind.GHOST -> Color.Transparent to (contentColor ?: colors.textSecondary)
         }
     // Disabled = half-transparent colors. Not Modifier.alpha: switching it on and off changes the

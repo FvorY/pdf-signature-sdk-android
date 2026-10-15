@@ -58,4 +58,24 @@ class ItemGeometryTest {
         assertEquals(42.0, limited.height, 1e-9)
         assertEquals(42.0, limited.width, 1e-9)
     }
+
+    @Test
+    fun nudgeMovesAndStaysInsidePage() {
+        assertEquals(110.0, ItemGeometry.nudge(box, 10.0, 0.0, 595.0, 842.0).x, 0.0)
+        assertEquals(190.0, ItemGeometry.nudge(box, 0.0, -10.0, 595.0, 842.0).y, 0.0)
+        assertEquals(0.0, ItemGeometry.nudge(box, -500.0, 0.0, 595.0, 842.0).x, 0.0)
+        assertEquals(842.0 - 48.0, ItemGeometry.nudge(box, 0.0, 5000.0, 595.0, 842.0).y, 0.0)
+    }
+
+    @Test
+    fun scaleByKeepsRatioAndLimits() {
+        val bigger = ItemGeometry.scaleBy(box, 1.1, 595.0, 842.0)
+        assertEquals(176.0, bigger.width, 1e-9)
+        assertEquals(52.8, bigger.height, 1e-9)
+        val smaller = ItemGeometry.scaleBy(box, 0.9, 595.0, 842.0)
+        assertEquals(144.0, smaller.width, 1e-9)
+        assertEquals(100.0, smaller.x, 0.0)
+        // Cannot grow past the page edge
+        assertEquals(495.0, ItemGeometry.scaleBy(box, 10.0, 595.0, 842.0).width, 1e-9)
+    }
 }

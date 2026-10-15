@@ -13,7 +13,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
 endobj
 5 0 obj
-<< /Length 1442 >>
+<< /Length 1429 >>
 stream
 0.85 G 0.5 w
 50 0 m 50 841.89 l S
@@ -60,15 +60,15 @@ stream
 1 0 0 1 4 32.89 Tm (y 800) Tj
 ET
 0.06 0.09 0.16 rg BT /F1 28 Tf 1 0 0 1 60 751.89 Tm (Page 1) Tj ET
-BT /F1 14 Tf 1 0 0 1 60 726.89 Tm (A4 portrait - 595.28 x 841.89 pt) Tj ET
-BT /F1 10 Tf 1 0 0 1 60 706.89 Tm (Grid labels use the SDK coordinates: origin top-left, y down.) Tj ET
+BT /F1 12 Tf 1 0 0 1 60 726.89 Tm (A4 portrait) Tj ET
+BT /F1 10 Tf 1 0 0 1 60 706.89 Tm (Visible box 595.28 x 841.89 pt. Grid labels: origin top-left, y down.) Tj ET
 endstream
 endobj
 6 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
 endobj
 7 0 obj
-<< /Length 1442 >>
+<< /Length 1429 >>
 stream
 0.85 G 0.5 w
 50 0 m 50 841.89 l S
@@ -115,15 +115,15 @@ stream
 1 0 0 1 4 32.89 Tm (y 800) Tj
 ET
 0.06 0.09 0.16 rg BT /F1 28 Tf 1 0 0 1 60 751.89 Tm (Page 2) Tj ET
-BT /F1 14 Tf 1 0 0 1 60 726.89 Tm (A4 portrait - 595.28 x 841.89 pt) Tj ET
-BT /F1 10 Tf 1 0 0 1 60 706.89 Tm (Grid labels use the SDK coordinates: origin top-left, y down.) Tj ET
+BT /F1 12 Tf 1 0 0 1 60 726.89 Tm (A4 portrait) Tj ET
+BT /F1 10 Tf 1 0 0 1 60 706.89 Tm (Visible box 595.28 x 841.89 pt. Grid labels: origin top-left, y down.) Tj ET
 endstream
 endobj
 8 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 841.89 595.28] /Resources << /Font << /F1 3 0 R >> >> /Contents 9 0 R >>
 endobj
 9 0 obj
-<< /Length 1419 >>
+<< /Length 1406 >>
 stream
 0.85 G 0.5 w
 50 0 m 50 595.28 l S
@@ -170,70 +170,70 @@ stream
 1 0 0 1 4 86.28 Tm (y 500) Tj
 ET
 0.06 0.09 0.16 rg BT /F1 28 Tf 1 0 0 1 60 505.28 Tm (Page 3) Tj ET
-BT /F1 14 Tf 1 0 0 1 60 480.28 Tm (A4 landscape - 841.89 x 595.28 pt) Tj ET
-BT /F1 10 Tf 1 0 0 1 60 460.28 Tm (Grid labels use the SDK coordinates: origin top-left, y down.) Tj ET
+BT /F1 12 Tf 1 0 0 1 60 480.28 Tm (A4 landscape) Tj ET
+BT /F1 10 Tf 1 0 0 1 60 460.28 Tm (Visible box 841.89 x 595.28 pt. Grid labels: origin top-left, y down.) Tj ET
 endstream
 endobj
 10 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612.00 792.00] /Resources << /Font << /F1 3 0 R >> >> /Contents 11 0 R >>
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 11 0 R >>
 endobj
 11 0 obj
-<< /Length 1436 >>
+<< /Length 1192 >>
 stream
 0.85 G 0.5 w
-50 0 m 50 792.00 l S
-100 0 m 100 792.00 l S
-150 0 m 150 792.00 l S
-200 0 m 200 792.00 l S
-250 0 m 250 792.00 l S
-300 0 m 300 792.00 l S
-350 0 m 350 792.00 l S
-400 0 m 400 792.00 l S
-450 0 m 450 792.00 l S
-500 0 m 500 792.00 l S
-550 0 m 550 792.00 l S
-600 0 m 600 792.00 l S
-0 742.00 m 612.00 742.00 l S
-0 692.00 m 612.00 692.00 l S
-0 642.00 m 612.00 642.00 l S
-0 592.00 m 612.00 592.00 l S
-0 542.00 m 612.00 542.00 l S
-0 492.00 m 612.00 492.00 l S
-0 442.00 m 612.00 442.00 l S
-0 392.00 m 612.00 392.00 l S
-0 342.00 m 612.00 342.00 l S
-0 292.00 m 612.00 292.00 l S
-0 242.00 m 612.00 242.00 l S
-0 192.00 m 612.00 192.00 l S
-0 142.00 m 612.00 142.00 l S
-0 92.00 m 612.00 92.00 l S
-0 42.00 m 612.00 42.00 l S
-0 0 1 RG 1.5 w 20 20 572.00 752.00 re S
+50 0 m 50 792 l S
+100 0 m 100 792 l S
+150 0 m 150 792 l S
+200 0 m 200 792 l S
+250 0 m 250 792 l S
+300 0 m 300 792 l S
+350 0 m 350 792 l S
+400 0 m 400 792 l S
+450 0 m 450 792 l S
+500 0 m 500 792 l S
+550 0 m 550 792 l S
+600 0 m 600 792 l S
+0 742 m 612 742 l S
+0 692 m 612 692 l S
+0 642 m 612 642 l S
+0 592 m 612 592 l S
+0 542 m 612 542 l S
+0 492 m 612 492 l S
+0 442 m 612 442 l S
+0 392 m 612 392 l S
+0 342 m 612 342 l S
+0 292 m 612 292 l S
+0 242 m 612 242 l S
+0 192 m 612 192 l S
+0 142 m 612 142 l S
+0 92 m 612 92 l S
+0 42 m 612 42 l S
+0 0 1 RG 1.5 w 20 20 572 752 re S
 0.4 g BT /F1 7 Tf
-1 0 0 1 102 782.00 Tm (x 100) Tj
-1 0 0 1 202 782.00 Tm (x 200) Tj
-1 0 0 1 302 782.00 Tm (x 300) Tj
-1 0 0 1 402 782.00 Tm (x 400) Tj
-1 0 0 1 502 782.00 Tm (x 500) Tj
-1 0 0 1 602 782.00 Tm (x 600) Tj
-1 0 0 1 4 683.00 Tm (y 100) Tj
-1 0 0 1 4 583.00 Tm (y 200) Tj
-1 0 0 1 4 483.00 Tm (y 300) Tj
-1 0 0 1 4 383.00 Tm (y 400) Tj
-1 0 0 1 4 283.00 Tm (y 500) Tj
-1 0 0 1 4 183.00 Tm (y 600) Tj
-1 0 0 1 4 83.00 Tm (y 700) Tj
+1 0 0 1 102 782 Tm (x 100) Tj
+1 0 0 1 202 782 Tm (x 200) Tj
+1 0 0 1 302 782 Tm (x 300) Tj
+1 0 0 1 402 782 Tm (x 400) Tj
+1 0 0 1 502 782 Tm (x 500) Tj
+1 0 0 1 602 782 Tm (x 600) Tj
+1 0 0 1 4 683 Tm (y 100) Tj
+1 0 0 1 4 583 Tm (y 200) Tj
+1 0 0 1 4 483 Tm (y 300) Tj
+1 0 0 1 4 383 Tm (y 400) Tj
+1 0 0 1 4 283 Tm (y 500) Tj
+1 0 0 1 4 183 Tm (y 600) Tj
+1 0 0 1 4 83 Tm (y 700) Tj
 ET
-0.06 0.09 0.16 rg BT /F1 28 Tf 1 0 0 1 60 702.00 Tm (Page 4) Tj ET
-BT /F1 14 Tf 1 0 0 1 60 677.00 Tm (US Letter - 612.00 x 792.00 pt) Tj ET
-BT /F1 10 Tf 1 0 0 1 60 657.00 Tm (Grid labels use the SDK coordinates: origin top-left, y down.) Tj ET
+0.06 0.09 0.16 rg BT /F1 28 Tf 1 0 0 1 60 702 Tm (Page 4) Tj ET
+BT /F1 12 Tf 1 0 0 1 60 677 Tm (US Letter) Tj ET
+BT /F1 10 Tf 1 0 0 1 60 657 Tm (Visible box 612 x 792 pt. Grid labels: origin top-left, y down.) Tj ET
 endstream
 endobj
 12 0 obj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Rotate 90 /Resources << /Font << /F1 3 0 R >> >> /Contents 13 0 R >>
 endobj
 13 0 obj
-<< /Length 1449 >>
+<< /Length 1436 >>
 stream
 0.85 G 0.5 w
 50 0 m 50 841.89 l S
@@ -280,8 +280,8 @@ stream
 1 0 0 1 4 32.89 Tm (y 800) Tj
 ET
 0.06 0.09 0.16 rg BT /F1 28 Tf 1 0 0 1 60 751.89 Tm (Page 5) Tj ET
-BT /F1 14 Tf 1 0 0 1 60 726.89 Tm (A4 with /Rotate 90 - 595.28 x 841.89 pt) Tj ET
-BT /F1 10 Tf 1 0 0 1 60 706.89 Tm (Grid labels use the SDK coordinates: origin top-left, y down.) Tj ET
+BT /F1 12 Tf 1 0 0 1 60 726.89 Tm (A4 with /Rotate 90) Tj ET
+BT /F1 10 Tf 1 0 0 1 60 706.89 Tm (Visible box 595.28 x 841.89 pt. Grid labels: origin top-left, y down.) Tj ET
 endstream
 endobj
 xref
@@ -292,16 +292,16 @@ xref
 0000000147 00000 n 
 0000000217 00000 n 
 0000000349 00000 n 
-0000001843 00000 n 
-0000001975 00000 n 
-0000003469 00000 n 
-0000003601 00000 n 
-0000005072 00000 n 
-0000005206 00000 n 
-0000006695 00000 n 
-0000006840 00000 n 
+0000001830 00000 n 
+0000001962 00000 n 
+0000003443 00000 n 
+0000003575 00000 n 
+0000005033 00000 n 
+0000005161 00000 n 
+0000006406 00000 n 
+0000006551 00000 n 
 trailer
 << /Size 14 /Root 1 0 R >>
 startxref
-8342
+8040
 %%EOF

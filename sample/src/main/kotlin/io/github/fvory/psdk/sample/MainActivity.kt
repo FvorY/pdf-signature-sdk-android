@@ -146,6 +146,22 @@ private fun SampleScreen() {
                 },
                 label = { Text("Cek paritas") },
             )
+            FilterChip(
+                selected = false,
+                onClick = {
+                    scope.launch {
+                        showJson = false
+                        log.clear()
+                        log +=
+                            try {
+                                listOf("Cek Pdfium (geometry.pdf):") + PdfiumCheck.run(context)
+                            } catch (e: Exception) {
+                                listOf("Pdfium error: ${e.javaClass.simpleName}: ${e.message}")
+                            }
+                    }
+                },
+                label = { Text("Cek Pdfium") },
+            )
             FilterChip(selected = showJson, onClick = { showJson = !showJson }, label = { Text("JSON") })
             for ((asset, title) in listOf("password.pdf" to "PDF password AES", "password-rc4.pdf" to "PDF password RC4")) {
                 FilterChip(

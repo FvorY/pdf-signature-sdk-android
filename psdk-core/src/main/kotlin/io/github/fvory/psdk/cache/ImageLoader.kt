@@ -10,7 +10,10 @@ import androidx.core.graphics.drawable.toBitmap
 import io.github.fvory.psdk.model.PsdkImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.MalformedURLException
 import java.net.URL
 
 /**
@@ -23,7 +26,10 @@ internal class ImageLoader(
     private val cache = LruCache<String, Bitmap>(16)
 
     /** Returns null when the image cannot be loaded; the item then keeps its placeholder look. */
-    suspend fun load(image: PsdkImage): Bitmap? {
+    suspend fun load(
+        image: PsdkImage,
+        allowInsecureHttp: Boolean = false,
+    ): Bitmap? {
         if (image is PsdkImage.BitmapImage) return image.bitmap
         val key = key(image)
         cache.get(key)?.let { return it }
@@ -31,8 +37,12 @@ internal class ImageLoader(
             withContext(Dispatchers.IO) {
                 try {
                     when (image) {
-                        is PsdkImage.Url -> decode(download(image.url))
-                        is PsdkImage.Base64 -> decode(Base64.decode(Base64Data.payload(image.data), Base64.DEFAULT))
+                        is PsdkImage.Url -> decode(download(image.url, allowInsecureHttp))
+                        is PsdkImage.Base64 -> {
+                            val payload = Base64Data.payload(image.data)
+                            if (payload.length > MAX_BASE64_CHARS) throw IOException("Image is too large")
+                            decode(Base64.decode(payload, Base64.DEFAULT))
+                        }
                         is PsdkImage.Resource -> ContextCompat.getDrawable(context, image.resId)?.toBitmap()
                         is PsdkImage.BitmapImage -> image.bitmap
                     }
@@ -52,27 +62,90 @@ internal class ImageLoader(
             is PsdkImage.BitmapImage -> "bmp:${System.identityHashCode(image.bitmap)}"
         }
 
-    private fun download(url: String): ByteArray {
-        val connection = URL(url).openConnection() as HttpURLConnection
-        try {
-            connection.connectTimeout = 15_000
-            connection.readTimeout = 15_000
-            return connection.inputStream.use { it.readBytes() }
-        } finally {
-            connection.disconnect()
+    private fun download(
+        value: String,
+        allowInsecureHttp: Boolean,
+    ): ByteArray {
+        var url = parseAndValidateUrl(value, allowInsecureHttp)
+        for (redirect in 0..MAX_REDIRECTS) {
+            val connection = url.openConnection() as HttpURLConnection
+            try {
+                connection.connectTimeout = 15_000
+                connection.readTimeout = 15_000
+                connection.instanceFollowRedirects = false
+                val code = connection.responseCode
+                if (code in REDIRECT_CODES) {
+                    if (redirect == MAX_REDIRECTS) throw IOException("Too many redirects")
+                    val location =
+                        connection.getHeaderField("Location") ?: throw IOException("Redirect has no location")
+                    url = parseAndValidateUrl(URL(url, location).toString(), allowInsecureHttp)
+                    continue
+                }
+                if (code !in 200..299) throw IOException("HTTP $code")
+                if (connection.contentLengthLong > MAX_IMAGE_BYTES) throw IOException("Image is too large")
+                return connection.inputStream.use { readLimited(it, MAX_IMAGE_BYTES) }
+            } finally {
+                connection.disconnect()
+            }
         }
+        error("unreachable")
+    }
+
+    private fun readLimited(
+        input: java.io.InputStream,
+        maxBytes: Long,
+    ): ByteArray {
+        val output = ByteArrayOutputStream()
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        var total = 0L
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            total += count
+            if (total > maxBytes) throw IOException("Image is too large")
+            output.write(buffer, 0, count)
+        }
+        return output.toByteArray()
+    }
+
+    private fun parseAndValidateUrl(
+        value: String,
+        allowInsecureHttp: Boolean,
+    ): URL {
+        val url =
+            try {
+                URL(value)
+            } catch (e: MalformedURLException) {
+                throw IOException("Invalid image URL", e)
+            }
+        val protocol = url.protocol.lowercase()
+        val allowed = protocol == "https" || (allowInsecureHttp && protocol == "http")
+        if (!allowed || url.host.isNullOrBlank() || !url.userInfo.isNullOrBlank()) {
+            throw IOException("Only HTTPS image URLs are supported")
+        }
+        return url
     }
 
     private fun decode(bytes: ByteArray): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
         var sample = 1
         while (maxOf(bounds.outWidth, bounds.outHeight) / sample > MAX_SIDE) sample *= 2
-        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
+        return BitmapFactory.decodeByteArray(
+            bytes,
+            0,
+            bytes.size,
+            BitmapFactory.Options().apply { inSampleSize = sample },
+        )
     }
 
     private companion object {
         const val MAX_SIDE = 1024
+        const val MAX_REDIRECTS = 5
+        const val MAX_IMAGE_BYTES = 10L * 1024L * 1024L
+        const val MAX_BASE64_CHARS = 14_000_000
+        val REDIRECT_CODES = 300..399
     }
 }
 

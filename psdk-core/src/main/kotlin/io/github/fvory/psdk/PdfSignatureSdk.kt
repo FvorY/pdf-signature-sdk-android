@@ -3,7 +3,7 @@ package io.github.fvory.psdk
 /**
  * Entry point and metadata for the SDK.
  *
- * The viewer itself (`PdfSignatureViewer`) is added in milestone M1.
+ * The native viewer is available as a preview API while the SDK is completed toward 1.0.0.
  */
 public object PdfSignatureSdk {
     /** Semantic version of this SDK. Kept in sync with the git tag. */
