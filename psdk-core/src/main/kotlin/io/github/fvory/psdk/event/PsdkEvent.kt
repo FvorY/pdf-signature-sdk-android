@@ -52,6 +52,28 @@ public sealed interface PsdkEvent {
     ) : PsdkEvent
 
     /**
+     * The document is password protected (web: `passwordRequested`). Answer with [updatePassword]
+     * or [cancel]. The built-in dialog shows as well unless `ui.passwordDialog` is off; whichever
+     * answers first wins. [isIncorrect] is true when the previous password was wrong.
+     */
+    public class PasswordRequested internal constructor(
+        public val isIncorrect: Boolean,
+        private val submit: (String) -> Unit,
+        private val dismiss: () -> Unit,
+    ) : PsdkEvent {
+        public fun updatePassword(password: String) {
+            submit(password)
+        }
+
+        public fun cancel() {
+            dismiss()
+        }
+
+        /** Never includes a password (B-PWD-07). */
+        override fun toString(): String = "PasswordRequested(isIncorrect=$isIncorrect)"
+    }
+
+    /**
      * All signatures and E-Materai were removed (web: `signaturesCleared`).
      * Also sent right before [DocumentLoaded], because loading a document clears them.
      */

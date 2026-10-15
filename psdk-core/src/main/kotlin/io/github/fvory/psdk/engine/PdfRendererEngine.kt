@@ -1,9 +1,15 @@
 package io.github.fvory.psdk.engine
 
+import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.pdf.LoadParams
 import android.graphics.pdf.PdfRenderer
+import android.graphics.pdf.PdfRendererPreV
+import android.graphics.pdf.RenderParams
+import android.os.Build
 import android.os.ParcelFileDescriptor
+import android.os.ext.SdkExtensions
 import io.github.fvory.psdk.error.PsdkException
 import io.github.fvory.psdk.model.PageSize
 import kotlinx.coroutines.CoroutineScope
@@ -18,15 +24,20 @@ import java.io.IOException
 import java.util.concurrent.Executors
 
 /**
- * [DocumentEngine] on the platform `PdfRenderer`.
+ * [DocumentEngine] on the platform PDF renderers.
  *
- * `PdfRenderer` is not thread-safe and allows one open page at a time (spec §15.1 R4), so every
+ * - No password: `PdfRenderer` on every Android version.
+ * - Password, Android 15+: `PdfRenderer` with `LoadParams`.
+ * - Password, Android 12–14: `PdfRendererPreV` with `LoadParams`, available when the device has
+ *   the S extension level 13 system update. Otherwise the document needs `psdk-pdfium`.
+ *
+ * The renderers are not thread-safe and allow one open page at a time (spec §15.1 R4), so every
  * call runs on one shared background thread behind a mutex, and each page is closed right away.
- * Pages render on a white bitmap because `PdfRenderer` leaves the background transparent (R3).
+ * Pages render on a white bitmap because the renderers leave the background transparent (R3).
  */
 internal class PdfRendererEngine private constructor(
     private val descriptor: ParcelFileDescriptor,
-    private val renderer: PdfRenderer,
+    private val renderer: Renderer,
     private val sizes: List<PageSize>,
 ) : DocumentEngine {
     private val mutex = Mutex()
@@ -46,7 +57,7 @@ internal class PdfRendererEngine private constructor(
                 if (closed) throw PsdkException.NotLoaded()
                 val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                 bitmap.eraseColor(Color.WHITE)
-                renderer.openPage(page - 1).use { it.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY) }
+                renderer.render(page - 1, bitmap)
                 bitmap
             }
         }
@@ -62,6 +73,59 @@ internal class PdfRendererEngine private constructor(
         }
     }
 
+    /** The two platform renderer classes behind one shape. */
+    private interface Renderer : AutoCloseable {
+        val pageCount: Int
+
+        fun pageSize(index: Int): PageSize
+
+        fun render(
+            index: Int,
+            bitmap: Bitmap,
+        )
+    }
+
+    private class Platform(
+        private val renderer: PdfRenderer,
+    ) : Renderer {
+        override val pageCount: Int get() = renderer.pageCount
+
+        override fun pageSize(index: Int): PageSize = renderer.openPage(index).use { PageSize(it.width.toDouble(), it.height.toDouble()) }
+
+        override fun render(
+            index: Int,
+            bitmap: Bitmap,
+        ) {
+            renderer.openPage(index).use { it.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY) }
+        }
+
+        override fun close() {
+            renderer.close()
+        }
+    }
+
+    @SuppressLint("NewApi")
+    private class PreV(
+        private val renderer: PdfRendererPreV,
+    ) : Renderer {
+        override val pageCount: Int get() = renderer.pageCount
+
+        override fun pageSize(index: Int): PageSize = renderer.openPage(index).use { PageSize(it.width.toDouble(), it.height.toDouble()) }
+
+        override fun render(
+            index: Int,
+            bitmap: Bitmap,
+        ) {
+            renderer.openPage(index).use {
+                it.render(bitmap, null, null, RenderParams.Builder(RenderParams.RENDER_MODE_FOR_DISPLAY).build())
+            }
+        }
+
+        override fun close() {
+            renderer.close()
+        }
+    }
+
     companion object {
         private val renderDispatcher =
             Executors
@@ -70,8 +134,25 @@ internal class PdfRendererEngine private constructor(
                 }.asCoroutineDispatcher()
         private val closeScope = CoroutineScope(SupervisorJob() + renderDispatcher)
 
-        /** Opens [file] and reads every page size up front (spec §15.3). */
-        suspend fun open(file: File): PdfRendererEngine =
+        /** Whether a platform renderer on this device can open password-protected PDFs. */
+        @SuppressLint("NewApi")
+        fun supportsPasswords(): Boolean =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM ||
+                (
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                        SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= PRE_V_EXTENSION_LEVEL
+                )
+
+        /**
+         * Opens [file], with [password] when given, and reads every page size up front (spec §15.3).
+         *
+         * @throws PasswordRequiredException when a password is needed or [password] is wrong.
+         * @throws PsdkException.PasswordNotSupported when the PDF needs a password this device cannot use.
+         */
+        suspend fun open(
+            file: File,
+            password: String? = null,
+        ): PdfRendererEngine =
             withContext(renderDispatcher) {
                 val descriptor =
                     try {
@@ -80,15 +161,16 @@ internal class PdfRendererEngine private constructor(
                         throw PsdkException.InvalidSource("Cannot open $file", e)
                     }
                 try {
-                    val renderer = PdfRenderer(descriptor)
-                    val sizes =
-                        List(renderer.pageCount) { index ->
-                            renderer.openPage(index).use { PageSize(it.width.toDouble(), it.height.toDouble()) }
-                        }
+                    val renderer = create(descriptor, password)
+                    val sizes = List(renderer.pageCount) { renderer.pageSize(it) }
                     PdfRendererEngine(descriptor, renderer, sizes)
                 } catch (e: SecurityException) {
                     descriptor.close()
-                    throw PasswordRequiredException(e)
+                    if (supportsPasswords()) throw PasswordRequiredException(e)
+                    throw PsdkException.PasswordNotSupported()
+                } catch (e: PsdkException) {
+                    descriptor.close()
+                    throw e
                 } catch (e: IOException) {
                     descriptor.close()
                     throw PsdkException.Corrupted(e)
@@ -97,10 +179,27 @@ internal class PdfRendererEngine private constructor(
                     throw PsdkException.Corrupted(e)
                 }
             }
+
+        @SuppressLint("NewApi")
+        private fun create(
+            descriptor: ParcelFileDescriptor,
+            password: String?,
+        ): Renderer {
+            if (password == null) return Platform(PdfRenderer(descriptor))
+            val params = LoadParams.Builder().setPassword(password).build()
+            return when {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM -> Platform(PdfRenderer(descriptor, params))
+                supportsPasswords() -> PreV(PdfRendererPreV(descriptor, params))
+                else -> throw PsdkException.PasswordNotSupported()
+            }
+        }
+
+        /** `PdfRendererPreV` ships with the S extension level 13 system update. */
+        private const val PRE_V_EXTENSION_LEVEL = 13
     }
 }
 
-/** Raised by an engine when the document needs a password. Handled inside the viewer. */
+/** Raised by an engine when the document needs a password, or the given one is wrong. Handled inside the viewer. */
 internal class PasswordRequiredException(
     cause: Throwable,
 ) : Exception(cause)

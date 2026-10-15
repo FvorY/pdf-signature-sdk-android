@@ -147,6 +147,21 @@ private fun SampleScreen() {
                 label = { Text("Cek paritas") },
             )
             FilterChip(selected = showJson, onClick = { showJson = !showJson }, label = { Text("JSON") })
+            for ((asset, title) in listOf("password.pdf" to "PDF password AES", "password-rc4.pdf" to "PDF password RC4")) {
+                FilterChip(
+                    selected = false,
+                    onClick = {
+                        scope.launch {
+                            try {
+                                viewer.loadDocument(PdfSource.AssetSource(asset))
+                            } catch (e: Exception) {
+                                log.add(0, "Error: ${e.javaClass.simpleName}: ${e.message}")
+                            }
+                        }
+                    },
+                    label = { Text(title) },
+                )
+            }
             FilterChip(
                 selected = config.disabled,
                 onClick = { viewer.updateConfig { it.copy(disabled = !it.disabled) } },
@@ -235,6 +250,7 @@ private fun describe(event: PsdkEvent): String =
         is PsdkEvent.SignatureMoved -> "signatureMoved ${event.item.short()}"
         is PsdkEvent.SignatureRemoved -> "signatureRemoved ${event.id}"
         PsdkEvent.SignaturesCleared -> "signaturesCleared"
+        is PsdkEvent.PasswordRequested -> "passwordRequested isIncorrect=${event.isIncorrect}"
     }
 
 private fun SignatureItem.short(): String = "$label p$page x=${x.f()} y=${y.f()} w=${width.f()} h=${height.f()}"

@@ -20,17 +20,21 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.fvory.psdk.config.PsdkLabels
+import io.github.fvory.psdk.error.PsdkException
 
 /**
  * "No Document Loaded" screen (B-INIT-03), with an "Open PDF" button when uploading is possible
- * (spec §13.4). Shows the load error instead of the subtitle when there is one.
+ * (spec §13.4). After a failed load the title becomes `labels.errorLoad`.
  */
 @Composable
 internal fun EmptyState(
     labels: PsdkLabels,
     error: Throwable?,
     onUpload: (() -> Unit)?,
+    showErrorDetails: Boolean = false,
 ) {
+    // Cancelling the password prompt returns to the normal empty state, like the web SDK
+    val shownError = error?.takeUnless { it is PsdkException.PasswordCancelled }
     val colors = LocalPsdkColors.current
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -62,15 +66,16 @@ internal fun EmptyState(
             drawLine(muted, Offset(9 * unit, 15 * unit), Offset(15 * unit, 15 * unit), stroke.width, StrokeCap.Round)
         }
         Text(
-            text = if (error == null) labels.emptyTitle else labels.errorLoad,
-            color = if (error == null) colors.textPrimary else colors.danger,
+            text = if (shownError == null) labels.emptyTitle else labels.errorLoad,
+            color = if (shownError == null) colors.textPrimary else colors.danger,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 16.dp),
         )
         Text(
-            text = error?.message ?: labels.emptySubtitle,
+            // Exception messages are English developer text: only shown with logLevel DEBUG
+            text = shownError?.message?.takeIf { showErrorDetails } ?: labels.emptySubtitle,
             color = colors.textSecondary,
             fontSize = 13.sp,
             textAlign = TextAlign.Center,

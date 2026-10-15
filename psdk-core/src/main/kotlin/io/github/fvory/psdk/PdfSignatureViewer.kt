@@ -2,6 +2,7 @@ package io.github.fvory.psdk
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.annotation.MainThread
 import io.github.fvory.psdk.cache.BitmapCache
 import io.github.fvory.psdk.cache.ImageLoader
@@ -17,6 +18,7 @@ import io.github.fvory.psdk.core.ItemStore
 import io.github.fvory.psdk.core.PaginationController
 import io.github.fvory.psdk.core.ZoomMath
 import io.github.fvory.psdk.engine.DocumentEngine
+import io.github.fvory.psdk.engine.PasswordFlow
 import io.github.fvory.psdk.engine.PasswordRequiredException
 import io.github.fvory.psdk.engine.PdfRendererEngine
 import io.github.fvory.psdk.engine.RenderSize
@@ -32,9 +34,11 @@ import io.github.fvory.psdk.model.PageSize
 import io.github.fvory.psdk.model.PdfSource
 import io.github.fvory.psdk.model.PlaceOptions
 import io.github.fvory.psdk.model.SignatureItem
+import io.github.fvory.psdk.state.ViewerSnapshot
 import io.github.fvory.psdk.ui.StaticOverlayPainter
 import io.github.fvory.psdk.util.Logger
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -47,6 +51,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * PDF viewer with signature and E-Materai placement — the Android counterpart of the web SDK's
@@ -55,15 +61,18 @@ import kotlinx.coroutines.launch
  * Call every method on the main thread. Show it with the `PdfSignatureViewer` composable; in
  * Compose, create it with `rememberPdfSignatureViewer` so it survives rotation.
  */
-public class PdfSignatureViewer(
+public class PdfSignatureViewer internal constructor(
     context: Context,
-    config: PsdkConfig = PsdkConfig(),
+    config: PsdkConfig,
+    restored: ViewerSnapshot?,
 ) {
+    public constructor(context: Context, config: PsdkConfig = PsdkConfig()) : this(context, config, null)
+
     private val appContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val bus = EventBus()
     private val logger = Logger(config.logLevel)
-    private val temp = TempFileManager(appContext.cacheDir)
+    private val temp = TempFileManager(appContext.cacheDir, restored?.tempId)
     private val resolver = SourceResolver(appContext, temp)
     private val cache = BitmapCache()
     private val pagination = PaginationController(::onPageChanged)
@@ -79,6 +88,10 @@ public class PdfSignatureViewer(
         )
 
     private var engine: DocumentEngine? = null
+    private var documentFile: File? = null
+
+    /** Item id → PNG of its loaded image in the temp folder, kept for process-death restore. */
+    private val itemImageFiles = mutableMapOf<String, String>()
     private var loadToken = 0L
     private var viewportWidth = 0f
     private var viewportHeight = 0f
@@ -96,6 +109,11 @@ public class PdfSignatureViewer(
 
     /** Skeleton overlay options while it is shown, null when hidden. */
     internal val skeleton = MutableStateFlow<SkeletonOptions?>(null)
+
+    /** Built-in password dialog state while a password is needed, null otherwise. */
+    internal val passwordPrompt = MutableStateFlow<PasswordPrompt?>(null)
+
+    private var pendingPassword: CompletableDeferred<String?>? = null
 
     /** Observable snapshot of the viewer for Compose (`collectAsState`) and Flow users. */
     public val state: StateFlow<PsdkState> = mutableState.asStateFlow()
@@ -133,10 +151,13 @@ public class PdfSignatureViewer(
         private set
 
     init {
-        config.file?.let { source ->
+        // After process death, reopen the saved local copy instead of config.file (spec §17)
+        val restoredFile = restored?.documentPath?.let(::File)?.takeIf { it.isFile }
+        val initial = if (restoredFile != null) PdfSource.FileSource(restoredFile) else config.file
+        initial?.let { source ->
             scope.launch {
                 try {
-                    loadDocument(source)
+                    loadInternal(source, restored.takeIf { restoredFile != null })
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -156,23 +177,44 @@ public class PdfSignatureViewer(
      */
     @MainThread
     public suspend fun loadDocument(source: PdfSource) {
+        loadInternal(source, null)
+    }
+
+    /** [restore]: put back page, zoom, scroll and items from a snapshot instead of starting fresh. */
+    private suspend fun loadInternal(
+        source: PdfSource,
+        restore: ViewerSnapshot?,
+    ) {
         ensureAlive()
         val token = ++loadToken
+        cancelPassword()
         closeEngine()
         mutableState.update {
             it.copy(isLoading = true, isLoaded = false, pageSizes = emptyList(), error = null, isPasswordProtected = false)
         }
         try {
             val file = resolver.resolve(source)
-            val opened = PdfRendererEngine.open(file)
+            val opened =
+                PasswordFlow.open(
+                    open = { password -> PdfRendererEngine.open(file, password) },
+                    ask = { isIncorrect -> askPassword(token, isIncorrect) },
+                )
+            passwordPrompt.value = null
             if (token != loadToken || isDestroyed) {
                 opened.close()
                 return
             }
             engine = opened
+            documentFile?.takeIf { it != file }?.let(temp::delete)
+            documentFile = file
             savedScroll = SavedScroll()
             val sizes = List(opened.pageCount) { opened.pageSize(it + 1) }
             pagination.setTotal(opened.pageCount)
+            if (restore != null) {
+                applyRestore(restore, sizes)
+                bus.emit(PsdkEvent.DocumentLoaded(opened.pageCount))
+                return
+            }
             val initialScale = config.scale?.let(ZoomMath::clamp)
             fitWidthPending = initialScale == null
             mutableState.update {
@@ -192,6 +234,7 @@ public class PdfSignatureViewer(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
+            if (token == loadToken) passwordPrompt.value = null
             if (token != loadToken) throw e
             val error =
                 when (e) {
@@ -199,7 +242,10 @@ public class PdfSignatureViewer(
                     is PasswordRequiredException -> PsdkException.PasswordNotSupported()
                     else -> PsdkException.Corrupted(e)
                 }
-            resetToEmpty(error, passwordProtected = e is PasswordRequiredException)
+            resetToEmpty(
+                error,
+                passwordProtected = mutableState.value.isPasswordProtected || error is PsdkException.PasswordNotSupported,
+            )
             throw error
         }
     }
@@ -298,7 +344,10 @@ public class PdfSignatureViewer(
     @MainThread
     public fun removeSignature(id: String) {
         if (isDestroyed) return
-        if (store.remove(id)) mutableItemBitmaps.update { it - id }
+        if (store.remove(id)) {
+            mutableItemBitmaps.update { it - id }
+            itemImageFiles.remove(id)?.let { temp.delete(File(it)) }
+        }
     }
 
     /** Removes every signature and E-Materai on every page. Always sends `signaturesCleared`. */
@@ -413,6 +462,8 @@ public class PdfSignatureViewer(
         mutableItemBitmaps.value = emptyMap()
         picker.value = null
         skeleton.value = null
+        cancelPassword()
+        passwordPrompt.value = null
         mutableState.value = PsdkState()
     }
 
@@ -436,6 +487,21 @@ public class PdfSignatureViewer(
      * so the list returns to the same place after rotation.
      */
     internal var savedScroll: SavedScroll = SavedScroll()
+
+    /** State to save for process-death restore (spec §17). Small: paths, not file contents. */
+    internal fun snapshot(): ViewerSnapshot =
+        ViewerSnapshot(
+            tempId = temp.id,
+            documentPath = documentFile?.takeIf { isLoaded }?.path,
+            page = currentPage,
+            scale = currentScale,
+            paginationLocked = isPaginationLocked,
+            scrollIndex = savedScroll.index,
+            scrollOffset = savedScroll.offset,
+            scrollHorizontal = savedScroll.horizontal,
+            items = store.all(),
+            itemImages = itemImageFiles.toMap(),
+        )
 
     internal fun onViewportChanged(
         width: Float,
@@ -512,6 +578,18 @@ public class PdfSignatureViewer(
         }
     }
 
+    /** Built-in dialog: the user entered a password (B-PWD-02). */
+    internal fun submitPassword(password: String) {
+        val pending = pendingPassword ?: return
+        passwordPrompt.update { it?.copy(submitting = true) }
+        pending.complete(password)
+    }
+
+    /** Built-in dialog or a new load: stop waiting for a password (B-PWD-04). */
+    internal fun cancelPassword() {
+        pendingPassword?.complete(null)
+    }
+
     /** Runs the upload flow in the viewer's scope, so it survives the UI being recreated. */
     internal fun startUpload(picked: PdfSource) {
         if (!isDestroyed) scope.launch { handleUpload(picked) }
@@ -556,6 +634,33 @@ public class PdfSignatureViewer(
         mutableState.update { it.copy(scale = scale) }
     }
 
+    /**
+     * Asks for a password through the `passwordRequested` event and, unless turned off, the built-in
+     * dialog (B-LOAD-04). Returns null when cancelled or when a newer load replaced this one.
+     */
+    private suspend fun askPassword(
+        token: Long,
+        isIncorrect: Boolean,
+    ): String? {
+        if (token != loadToken || isDestroyed) return null
+        mutableState.update { it.copy(isPasswordProtected = true) }
+        val answer = CompletableDeferred<String?>()
+        pendingPassword = answer
+        passwordPrompt.value = if (config.ui.passwordDialog) PasswordPrompt(isIncorrect) else null
+        bus.emit(
+            PsdkEvent.PasswordRequested(
+                isIncorrect = isIncorrect,
+                submit = { if (pendingPassword === answer) submitPassword(it) },
+                dismiss = { if (pendingPassword === answer) answer.complete(null) },
+            ),
+        )
+        return try {
+            answer.await()
+        } finally {
+            if (pendingPassword === answer) pendingPassword = null
+        }
+    }
+
     private fun openPicker(type: ItemType) {
         if (isDestroyed || !isLoaded) return
         val options = if (type == ItemType.SIGNATURE) config.signatureOptions else config.estampOptions
@@ -593,12 +698,71 @@ public class PdfSignatureViewer(
             if (store.get(id) == null) return@launch
             mutableItemBitmaps.update { it + (id to bitmap) }
             store.onImageLoaded(id, bitmap.width, bitmap.height)
+            saveItemImage(id, bitmap)
+        }
+    }
+
+    /** Keeps a PNG of the item image so a drawn signature survives process death. */
+    private fun saveItemImage(
+        id: String,
+        bitmap: Bitmap,
+    ) {
+        scope.launch {
+            val target = temp.imageFile(id)
+            val saved =
+                withContext(Dispatchers.IO) {
+                    try {
+                        target.parentFile?.mkdirs()
+                        target.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                    } catch (e: Exception) {
+                        false
+                    }
+                }
+            if (saved && store.get(id) != null) itemImageFiles[id] = target.path else temp.delete(target)
+        }
+    }
+
+    /** Puts a snapshot back after the document reopened: no signaturesCleared / placed events. */
+    private fun applyRestore(
+        snapshot: ViewerSnapshot,
+        sizes: List<PageSize>,
+    ) {
+        pagination.restore(snapshot.page, snapshot.paginationLocked)
+        fitWidthPending = false
+        savedScroll = SavedScroll(snapshot.scrollIndex, snapshot.scrollOffset, snapshot.scrollHorizontal)
+        mutableState.update {
+            it.copy(
+                isLoading = false,
+                isLoaded = true,
+                currentPage = pagination.currentPage,
+                totalPages = sizes.size,
+                scale = ZoomMath.clamp(snapshot.scale),
+                isPaginationLocked = pagination.isLocked,
+                pageSizes = sizes,
+                documentId = it.documentId + 1,
+            )
+        }
+        val items = snapshot.items.filter { it.page in 1..sizes.size }
+        store.restore(items)
+        val ids = items.map { it.id }.toSet()
+        scope.launch {
+            val bitmaps =
+                withContext(Dispatchers.IO) {
+                    snapshot.itemImages
+                        .filterKeys { it in ids }
+                        .mapNotNull { (id, path) -> BitmapFactory.decodeFile(path)?.let { id to it } }
+                        .toMap()
+                }
+            itemImageFiles.putAll(snapshot.itemImages.filterKeys { it in bitmaps })
+            mutableItemBitmaps.update { it + bitmaps }
         }
     }
 
     private fun clearItems() {
         store.clear()
         mutableItemBitmaps.value = emptyMap()
+        itemImageFiles.values.forEach { temp.delete(File(it)) }
+        itemImageFiles.clear()
     }
 
     private fun currentPageSize(): PageSize? = mutableState.value.pageSizes.getOrNull(currentPage - 1)
@@ -632,6 +796,12 @@ public class PdfSignatureViewer(
     private fun ensureAlive() {
         if (isDestroyed) throw PsdkException.Destroyed()
     }
+
+    /** What the built-in password dialog shows. */
+    internal data class PasswordPrompt(
+        val isIncorrect: Boolean,
+        val submitting: Boolean = false,
+    )
 
     internal data class SavedScroll(
         val index: Int = 0,

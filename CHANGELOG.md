@@ -7,6 +7,19 @@ project uses [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Process-death restore (M4): `rememberPdfSignatureViewer` saves a small snapshot (document copy
+  path, page, zoom, scroll, page lock, items) and item images as PNG files in the cache, so the
+  viewer comes back as it was after Android kills the app in the background. Restored items send
+  no `signaturePlaced` events; passwords are never saved.
+- Password-protected PDFs (M4): `passwordRequested` event with `updatePassword` / `cancel`, a
+  built-in password dialog (`ui.passwordDialog`), and `PsdkException.PasswordCancelled`.
+  Android 15+ uses `PdfRenderer` with `LoadParams`; Android 12–14 use `PdfRendererPreV` when the
+  device has the S extension 13 system update. Tested with AES-256 and RC4-128 files.
+
+### Changed
+- The 🔒 badge only shows while an encrypted document is open, and a cancelled password prompt
+  returns to the normal empty state. Exception messages in the empty state are only shown with
+  `logLevel = DEBUG`.
 - Viewer UI (M3): phone layout (top bar with ⋮ menu, bottom bar, floating page indicator, thumbnail
   strip) and tablet layout (web-style toolbar, thumbnail sidebar), switching at 600 dp.
 - Signature and E-Materai pickers (`signatureOptions`, `estampOptions`, `groupByCategory`),

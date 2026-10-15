@@ -53,7 +53,8 @@ internal fun Brand(
         ChromeRules.brandText(topbar, config.labels)?.let {
             Text(it, color = contentColor, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        if (state.isPasswordProtected) {
+        // Only for an open document; a failed or cancelled load hides it (B-LOAD-08)
+        if (state.isLoaded && state.isPasswordProtected) {
             val description = config.labels.securedBadge
             Icon(
                 PsdkIcons.lock,

@@ -43,6 +43,15 @@ internal class PaginationController(
 
     fun prevPage(): Boolean = goToPage(currentPage - 1)
 
+    /** Sets the page and lock after process death, without an event. Call after [setTotal]. */
+    fun restore(
+        page: Int,
+        locked: Boolean,
+    ) {
+        currentPage = page.coerceIn(1, maxOf(1, totalPages))
+        isLocked = locked
+    }
+
     fun reset() {
         currentPage = 1
         totalPages = 0
