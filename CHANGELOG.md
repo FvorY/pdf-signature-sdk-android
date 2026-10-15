@@ -7,6 +7,9 @@ project uses [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Sharp pages at high zoom (M4): when the whole-page bitmap hits its 4096 px cap, the visible part
+  is rendered again at full resolution with `renderRegion` (PdfRenderer and Pdfium) once scrolling
+  settles. Instrumented tests check that regions match whole-page renders on rotated and cropped pages.
 - Optional `psdk-pdfium` engine (io.legere:pdfiumandroid, Apache-2.0) for password-protected PDFs
   where the platform renderer cannot open them. It runs on its own thread, waits for renders
   before closing, uses Pdfium's rotated page sizes, and keeps its entry point under R8.
@@ -23,6 +26,9 @@ project uses [Semantic Versioning](https://semver.org/).
   device has the S extension 13 system update. Tested with AES-256 and RC4-128 files.
 
 ### Changed
+- Zooming with the buttons, menu or `setScale` centers the content horizontally. Before, a page
+  narrower than the widest page drifted off screen at high zoom (blank view from about 325%).
+- The page shadow and the disabled fade are drawn directly instead of through page-sized layers.
 - Remote PDF and image loading is HTTPS-only by default, with opt-in legacy HTTP, validated
   redirects, sanitized URL errors and bounded download sizes. Request headers are only sent to
   the original origin, including after same-origin redirects.

@@ -17,8 +17,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -75,7 +77,6 @@ internal fun OverlayLayer(
         Canvas(
             Modifier
                 .fillMaxSize()
-                .graphicsLayer { alpha = if (locks.disabled) 0.5f else 1f }
                 .pointerInput(page, scale, locks, keepStampRatio, pageSize) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = true)
@@ -170,6 +171,19 @@ internal fun OverlayLayer(
                     textMeasurer = textMeasurer,
                     colors = colors,
                 )
+            }
+            // Disabled viewer: fade the items (B-LCK-05). Drawn per item instead of a page-sized
+            // graphicsLayer, which would exceed the GPU texture limit at high zoom.
+            if (locks.disabled) {
+                val pxPerPoint = scale * density
+                val margin = HitTester.DELETE_RADIUS_DP.dp.toPx()
+                for (item in items) {
+                    drawRect(
+                        Color.White.copy(alpha = 0.5f),
+                        topLeft = Offset((item.x * pxPerPoint).toFloat() - margin, (item.y * pxPerPoint).toFloat() - margin),
+                        size = Size((item.width * pxPerPoint).toFloat() + 2 * margin, (item.height * pxPerPoint).toFloat() + 2 * margin),
+                    )
+                }
             }
         }
         // Invisible accessibility nodes on top of the drawn items (B-A11Y-02). They have no pointer
