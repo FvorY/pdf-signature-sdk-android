@@ -26,6 +26,9 @@ project uses [Semantic Versioning](https://semver.org/).
   device has the S extension 13 system update. Tested with AES-256 and RC4-128 files.
 
 ### Changed
+- Zooming with the buttons, menu or `setScale` centers the content horizontally. Before, a page
+  narrower than the widest page drifted off screen at high zoom (blank view from about 325%).
+- The page shadow and the disabled fade are drawn directly instead of through page-sized layers.
 - Remote PDF and image loading is HTTPS-only by default, with opt-in legacy HTTP, validated
   redirects, sanitized URL errors and bounded download sizes. Request headers are only sent to
   the original origin, including after same-origin redirects.

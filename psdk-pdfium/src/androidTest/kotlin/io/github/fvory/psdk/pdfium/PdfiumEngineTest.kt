@@ -59,7 +59,9 @@ class PdfiumEngineTest {
     private fun geometryPdf(): File {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val file = File(instrumentation.targetContext.cacheDir, "geometry-pdfium-test.pdf")
-        instrumentation.context.assets.open("geometry.pdf").use { input -> file.outputStream().use { input.copyTo(it) } }
+        instrumentation.context.assets
+            .open("geometry.pdf")
+            .use { input -> file.outputStream().use { input.copyTo(it) } }
         return file
     }
 
@@ -77,7 +79,8 @@ class PdfiumEngineTest {
                 val a = region.getPixel(x, y)
                 val b = whole.getPixel(left + x, top + y)
                 if (a != Color.WHITE) inked++
-                val delta = maxOf(abs(Color.red(a) - Color.red(b)), abs(Color.green(a) - Color.green(b)), abs(Color.blue(a) - Color.blue(b)))
+                val delta =
+                    maxOf(abs(Color.red(a) - Color.red(b)), abs(Color.green(a) - Color.green(b)), abs(Color.blue(a) - Color.blue(b)))
                 if (delta > 48) different++
             }
         }

@@ -122,6 +122,10 @@ internal fun PageList(
                             } else {
                                 withFrameNanos { }
                                 listState.scrollToItem(command.page - 1)
+                                // Zoom from buttons/setScale: pages are centered on the widest page, so a
+                                // narrower page drifts right as the zoom grows. Center the content so the
+                                // page stays in view instead of keeping the left edge.
+                                horizontalScroll.scrollTo(horizontalScroll.maxValue / 2)
                             }
                         } finally {
                             programmaticScroll = false

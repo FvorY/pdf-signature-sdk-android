@@ -16,13 +16,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
@@ -93,7 +95,9 @@ internal fun PageItem(
     Box(
         Modifier
             .size((size.width * scale).dp, (size.height * scale).dp)
-            .shadow(2.dp)
+            // No Modifier.shadow: it adds a layer as big as the page, and at high zoom that layer is
+            // larger than the GPU texture limit and the whole page disappears.
+            .drawBehind { drawPageShadow() }
             .background(Color.White)
             .semantics { contentDescription = description }
             .onGloballyPositioned { pagePosition = it.positionInWindow() },
@@ -133,3 +137,10 @@ private class Detail(
 )
 
 private const val DETAIL_DELAY_MS = 150L
+
+/** A thin edge and a soft line under the page, drawn without an offscreen layer. */
+private fun DrawScope.drawPageShadow() {
+    val edge = 1.dp.toPx()
+    drawRect(Color.Black.copy(alpha = 0.06f), topLeft = Offset(-edge, -edge), size = Size(size.width + 2 * edge, size.height + 2 * edge))
+    drawRect(Color.Black.copy(alpha = 0.10f), topLeft = Offset(0f, size.height), size = Size(size.width, 2 * edge))
+}

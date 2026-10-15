@@ -43,7 +43,9 @@ class RenderRegionTest {
         fun geometryPdf(): File {
             val instrumentation = InstrumentationRegistry.getInstrumentation()
             val file = File(instrumentation.targetContext.cacheDir, "geometry-test.pdf")
-            instrumentation.context.assets.open("geometry.pdf").use { input -> file.outputStream().use { input.copyTo(it) } }
+            instrumentation.context.assets
+                .open("geometry.pdf")
+                .use { input -> file.outputStream().use { input.copyTo(it) } }
             return file
         }
 
