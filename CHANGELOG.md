@@ -7,6 +7,8 @@ project uses [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `secureScreen` option (M4): sets `FLAG_SECURE` while the viewer is shown, blocking screenshots,
+  screen recording and the recent-apps preview; removed again only if the SDK added it.
 - Sharp pages at high zoom (M4): when the whole-page bitmap hits its 4096 px cap, the visible part
   is rendered again at full resolution with `renderRegion` (PdfRenderer and Pdfium) once scrolling
   settles. Instrumented tests check that regions match whole-page renders on rotated and cropped pages.
