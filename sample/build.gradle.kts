@@ -27,6 +27,8 @@ android {
 
 dependencies {
     implementation(project(":psdk-core"))
+    // Debug only: lets the sample compare the optional Pdfium engine with PdfRenderer
+    debugImplementation(project(":psdk-pdfium"))
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
     implementation(libs.compose.ui.tooling.preview)

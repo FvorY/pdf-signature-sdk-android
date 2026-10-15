@@ -30,6 +30,26 @@ internal object ItemGeometry {
             y = max(0.0, min(pageHeight - box.height, pointerY - grabY)),
         )
 
+    /** Accessibility "move" action: shift by [dx], [dy] points, kept inside the page (B-A11Y-02). */
+    fun nudge(
+        box: ItemBox,
+        dx: Double,
+        dy: Double,
+        pageWidth: Double,
+        pageHeight: Double,
+    ): ItemBox = drag(box, box.x + dx, box.y + dy, 0.0, 0.0, pageWidth, pageHeight)
+
+    /**
+     * Accessibility "bigger/smaller" action: scale by [factor] from the top-left corner, with the same
+     * limits as the resize handle. The aspect ratio is kept.
+     */
+    fun scaleBy(
+        box: ItemBox,
+        factor: Double,
+        pageWidth: Double,
+        pageHeight: Double,
+    ): ItemBox = resize(box, box.width * (factor - 1), box.height * (factor - 1), pageWidth, pageHeight, keepAspectRatio = true)
+
     /**
      * New size when dragging the bottom-right handle by [dx], [dy] from the size at gesture start.
      * Width and height change independently like the web SDK, unless [keepAspectRatio] is set.

@@ -113,7 +113,7 @@ internal fun ThumbnailSidebar(
                 )
                 Text(
                     "${state.totalPages}",
-                    color = colors.textMuted,
+                    color = colors.textSecondary,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier =

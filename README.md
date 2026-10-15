@@ -11,16 +11,16 @@ Native Android (Kotlin) PDF viewer that lets users place, drag, resize and remov
 [`pdf-signature-esign-sdk`](https://www.npmjs.com/package/pdf-signature-esign-sdk) v1.1.2,
 so the same backend can complete the signing.
 
-> 🚧 **Work in progress.** The project skeleton is in place (milestone M0). The viewer API
-> described below lands in the next milestones and is not usable yet.
+> 🚧 **Preview.** The viewer API and sample are usable and the public API is under stabilization;
+> it is not yet a 1.0.0 release.
 
 Bahasa Indonesia: [README.id.md](README.id.md)
 
-## Features (planned for 1.0.0)
+## Features
 
 - PDF rendering with the platform `PdfRenderer`: lazy pages, pinch-zoom, pagination, thumbnails
 - Signature and E-Materai placement with drag, resize, delete and per-item locks
-- Same methods, events and JSON output as the web SDK
+- Web-parity methods, events, JSON output, picker options and skeleton overlay
 - Jetpack Compose API plus a classic `View` for XML layouts
 - Light, dark and system themes; every UI string can be replaced
 - Optional `psdk-pdfium` module that opens password-protected PDFs on Android 14 and lower
@@ -55,7 +55,7 @@ dependencies {
 }
 ```
 
-## Usage (preview of the 1.0.0 API)
+## Usage
 
 ```kotlin
 val viewer = rememberPdfSignatureViewer(PsdkConfig(file = PdfSource.UriSource(uri)))
@@ -68,6 +68,13 @@ val json = viewer.getSignatures().toJsonArray()
 
 Coordinates use the top-left corner of the page as origin, in PDF points
 (1/72 inch), and `x, y` is the top-left corner of the item, the same as the web SDK.
+
+### Remote source security
+
+Remote PDF and image URLs require HTTPS by default. For a trusted legacy HTTP endpoint only,
+opt in explicitly with `PsdkConfig(allowInsecureHttp = true)`. Downloads follow at most five
+validated redirects and are limited to 100 MiB for PDFs and 10 MiB for images. The host app must
+declare the `INTERNET` permission when using remote sources.
 
 ## Project layout
 
