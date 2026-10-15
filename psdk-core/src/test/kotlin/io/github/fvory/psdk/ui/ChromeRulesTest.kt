@@ -85,4 +85,12 @@ class ChromeRulesTest {
         assertNull(ChromeRules.parsePage("abc"))
         assertNull(ChromeRules.parsePage(""))
     }
+
+    @Test
+    fun shortViewerDropsThumbnailsThenStatusBarBeforeTheBottomBar() {
+        assertTrue(ChromeRules.showThumbnailStrip(700f))
+        assertFalse(ChromeRules.showThumbnailStrip(500f))
+        assertTrue(ChromeRules.showStatusBar(500f))
+        assertFalse(ChromeRules.showStatusBar(380f))
+    }
 }

@@ -50,6 +50,7 @@ internal fun ViewerRoot(
         BoxWithConstraints(modifier.fillMaxSize().background(colors.background)) {
             val tablet = ChromeRules.isTablet(config.ui.layout, maxWidth.value)
             val iconOnly = maxWidth.value < ChromeRules.ICON_ONLY_MAX_WIDTH_DP
+            val viewerHeight = maxHeight.value
             val topbar = config.ui.topbar
             val showToolbars = ChromeRules.topBarHasContent(topbar)
             val showPill = !tablet && topbar.pagination && state.isLoaded
@@ -72,10 +73,12 @@ internal fun ViewerRoot(
                     )
                 }
                 if (!tablet) {
-                    if (config.ui.sidebar.thumbnails && state.isLoaded) ThumbnailStrip(viewer, state, config)
+                    if (config.ui.sidebar.thumbnails && state.isLoaded && ChromeRules.showThumbnailStrip(viewerHeight)) {
+                        ThumbnailStrip(viewer, state, config)
+                    }
                     if (showToolbars) PhoneBottomBar(viewer, state, config, upload, iconOnly)
                 }
-                if (config.ui.statusbar) StatusBar(state, config)
+                if (config.ui.statusbar && ChromeRules.showStatusBar(viewerHeight)) StatusBar(state, config)
             }
 
             picker?.let { PickerSheet(viewer, it, config, tablet) }

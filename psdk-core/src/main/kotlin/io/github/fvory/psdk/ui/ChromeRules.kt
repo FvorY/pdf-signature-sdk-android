@@ -11,6 +11,20 @@ internal object ChromeRules {
     const val TABLET_MIN_WIDTH_DP: Float = 600f
     const val ICON_ONLY_MAX_WIDTH_DP: Float = 360f
 
+    /** Below this viewer height the phone thumbnail strip is hidden, so the bottom bar keeps its room. */
+    const val MIN_HEIGHT_FOR_THUMBNAILS_DP: Float = 560f
+
+    /** Below this viewer height the status line is hidden as well. */
+    const val MIN_HEIGHT_FOR_STATUSBAR_DP: Float = 420f
+
+    /**
+     * What fits in a short viewer. The bottom bar (signature, E-Materai) has priority: the thumbnail
+     * strip goes first, then the status line, instead of the bottom bar being cut off.
+     */
+    fun showThumbnailStrip(heightDp: Float): Boolean = heightDp >= MIN_HEIGHT_FOR_THUMBNAILS_DP
+
+    fun showStatusBar(heightDp: Float): Boolean = heightDp >= MIN_HEIGHT_FOR_STATUSBAR_DP
+
     /** B-INIT-04: no top bar when every toolbar option is off and there is nothing custom to show. */
     fun topBarHasContent(topbar: TopBarConfig): Boolean =
         topbar.upload ||
