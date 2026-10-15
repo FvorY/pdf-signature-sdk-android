@@ -16,6 +16,8 @@ so the same backend can complete the signing.
 
 Bahasa Indonesia: [README.id.md](README.id.md)
 
+Documentation: [DOCUMENTATION.en.md](DOCUMENTATION.en.md) · [Dokumentasi Bahasa Indonesia](DOCUMENTATION.id.md)
+
 ## Features
 
 - PDF rendering with the platform `PdfRenderer`: lazy pages, pinch-zoom, pagination, thumbnails
