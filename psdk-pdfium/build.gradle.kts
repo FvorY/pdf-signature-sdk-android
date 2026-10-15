@@ -39,7 +39,7 @@ kotlin {
 
 dependencies {
     api(project(":psdk-core"))
-    // The Pdfium binding is chosen and added in milestone M4.
+    implementation("io.legere:pdfiumandroid:2.0.1")
 }
 
 publishing {

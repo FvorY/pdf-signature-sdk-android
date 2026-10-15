@@ -12,6 +12,11 @@ public data class PsdkConfig(
     /** Loaded automatically when the viewer is created. Errors are logged, not thrown (B-INIT-02). */
     public val file: PdfSource? = null,
     /**
+     * Allows remote HTTP sources. HTTPS is required by default; enable this only for a trusted
+     * legacy endpoint that cannot serve TLS.
+     */
+    public val allowInsecureHttp: Boolean = false,
+    /**
      * Initial zoom, 0.25–4.0. `null` (default) fits the widest page to the screen width.
      * The web SDK defaults to 1.5; coordinates do not depend on the zoom.
      */

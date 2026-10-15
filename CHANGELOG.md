@@ -7,6 +7,9 @@ project uses [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Optional `psdk-pdfium` engine (io.legere:pdfiumandroid, Apache-2.0) for password-protected PDFs
+  where the platform renderer cannot open them. It runs on its own thread, waits for renders
+  before closing, uses Pdfium's rotated page sizes, and keeps its entry point under R8.
 - Geometry parity fixtures (M4): `parity/pdfs/geometry.pdf` with /Rotate 0/90/180/270, CropBox
   offsets and a MediaBox not at 0,0, plus scenarios limited with `"only"`. Page sizes and item
   positions match the web SDK on a device (PdfRenderer honours CropBox and /Rotate like pdf.js).
@@ -20,6 +23,9 @@ project uses [Semantic Versioning](https://semver.org/).
   device has the S extension 13 system update. Tested with AES-256 and RC4-128 files.
 
 ### Changed
+- Remote PDF and image loading is HTTPS-only by default, with opt-in legacy HTTP, validated
+  redirects, sanitized URL errors and bounded download sizes. Request headers are only sent to
+  the original origin, including after same-origin redirects.
 - The 🔒 badge only shows while an encrypted document is open, and a cancelled password prompt
   returns to the normal empty state. Exception messages in the empty state are only shown with
   `logLevel = DEBUG`.

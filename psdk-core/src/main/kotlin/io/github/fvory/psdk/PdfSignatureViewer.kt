@@ -18,9 +18,9 @@ import io.github.fvory.psdk.core.ItemStore
 import io.github.fvory.psdk.core.PaginationController
 import io.github.fvory.psdk.core.ZoomMath
 import io.github.fvory.psdk.engine.DocumentEngine
+import io.github.fvory.psdk.engine.EngineRegistry
 import io.github.fvory.psdk.engine.PasswordFlow
 import io.github.fvory.psdk.engine.PasswordRequiredException
-import io.github.fvory.psdk.engine.PdfRendererEngine
 import io.github.fvory.psdk.engine.RenderSize
 import io.github.fvory.psdk.engine.SourceResolver
 import io.github.fvory.psdk.engine.TempFileManager
@@ -33,6 +33,7 @@ import io.github.fvory.psdk.model.ItemType
 import io.github.fvory.psdk.model.PageSize
 import io.github.fvory.psdk.model.PdfSource
 import io.github.fvory.psdk.model.PlaceOptions
+import io.github.fvory.psdk.model.PsdkImage
 import io.github.fvory.psdk.model.SignatureItem
 import io.github.fvory.psdk.state.ViewerSnapshot
 import io.github.fvory.psdk.ui.StaticOverlayPainter
@@ -193,10 +194,10 @@ public class PdfSignatureViewer internal constructor(
             it.copy(isLoading = true, isLoaded = false, pageSizes = emptyList(), error = null, isPasswordProtected = false)
         }
         try {
-            val file = resolver.resolve(source)
+            val file = resolver.resolve(source, config.allowInsecureHttp)
             val opened =
                 PasswordFlow.open(
-                    open = { password -> PdfRendererEngine.open(file, password) },
+                    open = { password -> EngineRegistry.open(file, password) },
                     ask = { isIncorrect -> askPassword(token, isIncorrect) },
                 )
             passwordPrompt.value = null
@@ -595,7 +596,7 @@ public class PdfSignatureViewer internal constructor(
         if (!isDestroyed) scope.launch { handleUpload(picked) }
     }
 
-    internal suspend fun loadImage(image: io.github.fvory.psdk.model.PsdkImage): Bitmap? = imageLoader.load(image)
+    internal suspend fun loadImage(image: PsdkImage): Bitmap? = imageLoader.load(image, config.allowInsecureHttp)
 
     /** Theme button: switch between light and dark (B-TB-06). No event. */
     internal fun toggleTheme(currentlyDark: Boolean) {
@@ -690,7 +691,7 @@ public class PdfSignatureViewer internal constructor(
         image: io.github.fvory.psdk.model.PsdkImage,
     ) {
         scope.launch {
-            val bitmap = imageLoader.load(image)
+            val bitmap = imageLoader.load(image, config.allowInsecureHttp)
             if (bitmap == null) {
                 logger.e("Could not load the image of item $id")
                 return@launch
