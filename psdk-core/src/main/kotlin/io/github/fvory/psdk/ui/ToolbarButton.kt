@@ -13,7 +13,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -44,12 +43,17 @@ internal fun ToolbarButton(
     contentColor: Color? = null,
 ) {
     val colors = LocalPsdkColors.current
-    val (background, foreground) =
+    val (baseBackground, baseForeground) =
         when (kind) {
             ButtonKind.ACCENT -> colors.accent to colors.onAccent
             ButtonKind.DANGER -> colors.danger to Color.White
             ButtonKind.GHOST -> Color.Transparent to (contentColor ?: colors.textSecondary)
         }
+    // Disabled = half-transparent colors. Not Modifier.alpha: switching it on and off changes the
+    // modifier chain, and on some devices the background then stopped drawing after a document load.
+    val dim = if (enabled) 1f else 0.5f
+    val background = baseBackground.copy(alpha = baseBackground.alpha * dim)
+    val foreground = baseForeground.copy(alpha = baseForeground.alpha * dim)
     Row(
         modifier
             .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
@@ -58,7 +62,6 @@ internal fun ToolbarButton(
             .background(background)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .semantics { contentDescription = description }
-            .alpha(if (enabled) 1f else 0.5f)
             .padding(horizontal = if (label == null) 8.dp else 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),

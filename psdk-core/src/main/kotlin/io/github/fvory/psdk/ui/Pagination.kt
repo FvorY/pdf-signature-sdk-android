@@ -22,10 +22,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -118,7 +118,7 @@ internal fun PaginationPill(
             .shadow(6.dp, RoundedCornerShape(24.dp))
             .clip(RoundedCornerShape(24.dp))
             .background(colors.surface)
-            .alpha(if (config.disabled) 0.6f else 1f)
+            .graphicsLayer { alpha = if (config.disabled) 0.6f else 1f }
             .padding(horizontal = 4.dp),
     ) {
         PageControls(viewer, state, config, inlineInput = false, onOpenDialog = onOpenDialog)

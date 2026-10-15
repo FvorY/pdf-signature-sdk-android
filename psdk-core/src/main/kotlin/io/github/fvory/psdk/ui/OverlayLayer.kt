@@ -13,8 +13,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -65,7 +65,7 @@ internal fun OverlayLayer(
     Canvas(
         Modifier
             .fillMaxSize()
-            .alpha(if (locks.disabled) 0.5f else 1f)
+            .graphicsLayer { alpha = if (locks.disabled) 0.5f else 1f }
             .pointerInput(page, scale, locks, keepStampRatio, pageSize) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = true)
