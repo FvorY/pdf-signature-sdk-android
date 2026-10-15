@@ -101,6 +101,15 @@ internal class ItemStore(
         return true
     }
 
+    /** Puts items back after process death, without events (spec §17). */
+    fun restore(restored: List<SignatureItem>) {
+        images.clear()
+        explicitHeight.clear()
+        // Restored items keep their saved size: a late image load must not change the height
+        explicitHeight += restored.map { it.id }
+        set(restored)
+    }
+
     /** Removes everything and always sends `signaturesCleared` (B-OVL-10). */
     fun clear() {
         images.clear()

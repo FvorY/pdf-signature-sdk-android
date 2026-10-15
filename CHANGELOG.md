@@ -7,6 +7,10 @@ project uses [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Process-death restore (M4): `rememberPdfSignatureViewer` saves a small snapshot (document copy
+  path, page, zoom, scroll, page lock, items) and item images as PNG files in the cache, so the
+  viewer comes back as it was after Android kills the app in the background. Restored items send
+  no `signaturePlaced` events; passwords are never saved.
 - Password-protected PDFs (M4): `passwordRequested` event with `updatePassword` / `cancel`, a
   built-in password dialog (`ui.passwordDialog`), and `PsdkException.PasswordCancelled`.
   Android 15+ uses `PdfRenderer` with `LoadParams`; Android 12–14 use `PdfRendererPreV` when the
