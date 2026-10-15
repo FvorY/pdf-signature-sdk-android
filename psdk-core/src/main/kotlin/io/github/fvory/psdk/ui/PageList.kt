@@ -32,6 +32,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import io.github.fvory.psdk.PdfSignatureViewer
@@ -58,6 +59,7 @@ private const val ZOOM_SETTLE_MILLIS = 850L
 internal fun PageList(
     viewer: PdfSignatureViewer,
     state: PsdkState,
+    bottomPadding: Dp = VERTICAL_PADDING,
 ) {
     val listState =
         remember(state.documentId) { LazyListState(viewer.savedScroll.index, viewer.savedScroll.offset) }
@@ -69,6 +71,7 @@ internal fun PageList(
     var pinchZoom by remember { mutableFloatStateOf(1f) }
     var pinchCentroid by remember { mutableStateOf(Offset.Zero) }
     val scale = state.scale
+    val config by viewer.configFlow.collectAsState()
     val itemBitmaps by viewer.itemBitmaps.collectAsState()
     val itemsByPage = remember(state.signatures) { state.signatures.groupBy { it.page } }
 
@@ -151,7 +154,7 @@ internal fun PageList(
         }
 
         val zoomGestures =
-            if (viewer.config.ui.viewer.zoom) {
+            if (config.ui.viewer.zoom) {
                 Modifier
                     .pinchToZoom(
                         key = scale,
@@ -203,8 +206,8 @@ internal fun PageList(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.width(contentWidth).fillMaxHeight(),
-                userScrollEnabled = !(state.isPaginationLocked && viewer.config.lockScrollWhenPaginationLocked),
-                contentPadding = PaddingValues(vertical = VERTICAL_PADDING),
+                userScrollEnabled = !(state.isPaginationLocked && config.lockScrollWhenPaginationLocked),
+                contentPadding = PaddingValues(top = VERTICAL_PADDING, bottom = bottomPadding),
                 verticalArrangement = Arrangement.spacedBy(PAGE_GAP),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {

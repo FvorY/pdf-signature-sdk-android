@@ -2,10 +2,8 @@ package io.github.fvory.psdk.sample
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,11 +15,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -31,7 +29,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -39,8 +36,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.fvory.psdk.PdfSignatureSdk
 import io.github.fvory.psdk.PdfSignatureViewer
+import io.github.fvory.psdk.config.PickerOption
 import io.github.fvory.psdk.config.PsdkConfig
 import io.github.fvory.psdk.config.PsdkLabels
+import io.github.fvory.psdk.config.PsdkLayout
+import io.github.fvory.psdk.config.PsdkThemeMode
+import io.github.fvory.psdk.config.PsdkUiConfig
+import io.github.fvory.psdk.config.TopBarConfig
+import io.github.fvory.psdk.config.UploadDecision
 import io.github.fvory.psdk.event.PsdkEvent
 import io.github.fvory.psdk.model.PdfSource
 import io.github.fvory.psdk.model.PlaceOptions
@@ -48,8 +51,8 @@ import io.github.fvory.psdk.model.PsdkImage
 import io.github.fvory.psdk.model.SignatureItem
 import io.github.fvory.psdk.model.toJsonString
 import io.github.fvory.psdk.rememberPdfSignatureViewer
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -63,23 +66,42 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/**
- * Temporary controls for milestones M1–M2. The SDK's own toolbar replaces them in M3.
- */
+private val signatureOptions =
+    listOf(
+        PickerOption("direktur", "Direktur", PsdkImage.BitmapImage(SampleImages.signature), group = "Internal"),
+        PickerOption("manajer", "Manajer", group = "Internal"),
+        PickerOption("klien", "Klien", group = "Eksternal"),
+        PickerOption("saksi", "Saksi"),
+    )
+
+private val estampOptions =
+    listOf(
+        PickerOption("materai-10000", "Materai 10.000", PsdkImage.BitmapImage(SampleImages.stamp)),
+        PickerOption("materai-polos", "Tanpa gambar"),
+    )
+
+/** The SDK's own toolbar does the work; the "Demo" panel exercises the API and the parity check. */
 @Composable
 private fun SampleScreen() {
     val viewer =
         rememberPdfSignatureViewer(
             PsdkConfig(
                 file = PdfSource.AssetSource("sample.pdf"),
+                theme = PsdkThemeMode.SYSTEM,
+                signatureOptions = signatureOptions,
+                estampOptions = estampOptions,
+                groupByCategory = true,
                 lockScrollWhenPaginationLocked = true,
                 labels = PsdkLabels.indonesian(),
+                ui = PsdkUiConfig(topbar = TopBarConfig(brandText = "PSDK Sample")),
+                onUpload = { UploadDecision.Proceed },
             ),
         )
     val state by viewer.state.collectAsState()
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val log = remember { mutableStateListOf<String>() }
-    val context = LocalContext.current
+    var panel by remember { mutableStateOf(false) }
     var showJson by remember { mutableStateOf(false) }
 
     DisposableEffect(viewer) {
@@ -91,82 +113,102 @@ private fun SampleScreen() {
         onDispose { subscription.cancel() }
     }
 
-    val picker =
-        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri != null) scope.launch { loadSafely(viewer, PdfSource.UriSource(uri), log) }
-        }
-
     Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            FilledTonalButton(onClick = { picker.launch(arrayOf("application/pdf")) }) { Text("Buka PDF") }
-            OutlinedButton(onClick = {
-                scope.launch { loadSafely(viewer, PdfSource.AssetSource("sample.pdf"), log) }
-            }) { Text("Contoh") }
-            OutlinedButton(onClick = { viewer.prevPage() }) { Text("‹") }
-            Text("${state.currentPage} / ${if (state.totalPages == 0) "—" else state.totalPages}")
-            OutlinedButton(onClick = { viewer.nextPage() }) { Text("›") }
-            OutlinedButton(onClick = { scope.launch { viewer.setScale(zoomStep(-1, viewer.currentScale)) } }) {
-                Text("−")
-            }
-            Text("${(state.scale * 100).roundToInt()}%")
-            OutlinedButton(onClick = { scope.launch { viewer.setScale(zoomStep(1, viewer.currentScale)) } }) {
-                Text("+")
-            }
-            OutlinedButton(onClick = { scope.launch { viewer.fitToScreen() } }) { Text("Fit") }
-            OutlinedButton(onClick = { scope.launch { viewer.fitToWidth() } }) { Text("Lebar") }
-            OutlinedButton(onClick = { viewer.setPaginationLocked(!state.isPaginationLocked) }) {
-                Text(if (state.isPaginationLocked) "Buka kunci" else "Kunci halaman")
-            }
+        PdfSignatureViewer(viewer, Modifier.weight(1f))
+        TextButton(onClick = { panel = !panel }, modifier = Modifier.fillMaxWidth()) {
+            Text(if (panel) "Tutup demo ▾" else "Demo & log ▴  (SDK ${PdfSignatureSdk.version})")
         }
+        if (!panel) return@Column
+        val config = viewer.config
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            fun place(block: () -> Unit) {
-                try {
-                    block()
-                } catch (e: Exception) {
-                    log.add(0, "Error: ${e.message}")
-                }
-            }
-            FilledTonalButton(onClick = { place { viewer.placeSignature(PlaceOptions(label = "Direktur")) } }) { Text("+ TTD") }
-            FilledTonalButton(onClick = {
-                place { viewer.placeSignature(PlaceOptions(label = "Klien", image = PsdkImage.BitmapImage(SampleImages.signature))) }
-            }) { Text("+ TTD gambar") }
-            FilledTonalButton(onClick = { place { viewer.placeEStamp() } }) { Text("+ Materai") }
-            FilledTonalButton(onClick = {
-                place { viewer.placeEStamp(PlaceOptions(image = PsdkImage.BitmapImage(SampleImages.stamp))) }
-            }) { Text("+ Materai gambar") }
-            OutlinedButton(onClick = {
-                place { viewer.placeSignature(PlaceOptions(x = 40.0, y = 60.0, label = "Terkunci", locked = true)) }
-            }) { Text("+ TTD terkunci") }
-            OutlinedButton(onClick = { viewer.clearSignatures() }) { Text("Hapus semua") }
-            OutlinedButton(onClick = { showJson = !showJson }) { Text(if (showJson) "Log" else "JSON") }
-            OutlinedButton(onClick = {
-                scope.launch {
-                    showJson = false
-                    val failures =
-                        try {
-                            ParityCheck.run(context, viewer)
-                        } catch (e: Exception) {
-                            listOf("Error: ${e.message}")
-                        }
-                    log.clear()
-                    log +=
-                        if (failures.isEmpty()) {
-                            listOf("Paritas web: SEMUA LULUS")
-                        } else {
-                            listOf("Paritas web: ${failures.size} GAGAL") +
-                                failures
-                        }
-                }
-            }) { Text("Cek paritas") }
+            FilterChip(
+                selected = false,
+                onClick = {
+                    scope.launch {
+                        showJson = false
+                        val failures =
+                            try {
+                                ParityCheck.run(context, viewer)
+                            } catch (e: Exception) {
+                                listOf("Error: ${e.message}")
+                            }
+                        log.clear()
+                        log +=
+                            if (failures.isEmpty()) {
+                                listOf("Paritas web: SEMUA LULUS")
+                            } else {
+                                listOf("Paritas web: ${failures.size} GAGAL") + failures
+                            }
+                    }
+                },
+                label = { Text("Cek paritas") },
+            )
+            FilterChip(selected = showJson, onClick = { showJson = !showJson }, label = { Text("JSON") })
+            FilterChip(
+                selected = config.disabled,
+                onClick = { viewer.updateConfig { it.copy(disabled = !it.disabled) } },
+                label = { Text("Nonaktif") },
+            )
+            FilterChip(
+                selected = config.disableDragging,
+                onClick = { viewer.updateConfig { it.copy(disableDragging = !it.disableDragging) } },
+                label = { Text("Kunci item") },
+            )
+            FilterChip(
+                selected = state.isPaginationLocked,
+                onClick = { viewer.setPaginationLocked(!state.isPaginationLocked) },
+                label = { Text("Kunci halaman") },
+            )
+            FilterChip(
+                selected = false,
+                onClick = {
+                    try {
+                        viewer.placeSignature(PlaceOptions(x = 40.0, y = 60.0, label = "Terkunci", locked = true))
+                    } catch (e: Exception) {
+                        log.add(0, "Error: ${e.message}")
+                    }
+                },
+                label = { Text("+ TTD terkunci") },
+            )
+            FilterChip(
+                selected = false,
+                onClick = {
+                    scope.launch {
+                        viewer.showSkeleton(true)
+                        delay(2_000)
+                        viewer.showSkeleton(false)
+                    }
+                },
+                label = { Text("Skeleton 2 dtk") },
+            )
+            FilterChip(
+                selected = config.labels.uploadBtn == PsdkLabels().uploadBtn,
+                onClick = {
+                    viewer.updateConfig {
+                        it.copy(labels = if (it.labels.uploadBtn == PsdkLabels().uploadBtn) PsdkLabels.indonesian() else PsdkLabels())
+                    }
+                },
+                label = { Text("English") },
+            )
+            FilterChip(
+                selected = config.ui.layout != PsdkLayout.AUTO,
+                onClick = {
+                    viewer.updateConfig {
+                        val next =
+                            when (it.ui.layout) {
+                                PsdkLayout.AUTO -> PsdkLayout.TABLET
+                                PsdkLayout.TABLET -> PsdkLayout.PHONE
+                                PsdkLayout.PHONE -> PsdkLayout.AUTO
+                            }
+                        it.copy(ui = it.ui.copy(layout = next))
+                    }
+                },
+                label = { Text("Layout: ${config.ui.layout.name.lowercase()}") },
+            )
         }
-        PdfSignatureViewer(viewer, Modifier.weight(1f))
         Column(
             Modifier
                 .fillMaxWidth()
@@ -178,30 +220,11 @@ private fun SampleScreen() {
                 Text("getSignatures() → ${state.signatures.size} item", fontSize = 11.sp)
                 Text(state.signatures.toJsonString(), fontSize = 10.sp, fontFamily = FontFamily.Monospace)
             } else {
-                Text("SDK ${PdfSignatureSdk.version} · event terakhir:", fontSize = 11.sp)
                 log.forEach { Text(it, fontSize = 11.sp, maxLines = 1) }
             }
         }
     }
 }
-
-private suspend fun loadSafely(
-    viewer: PdfSignatureViewer,
-    source: PdfSource,
-    log: MutableList<String>,
-) {
-    try {
-        viewer.loadDocument(source)
-    } catch (e: Exception) {
-        log.add(0, "Error: ${e.message}")
-    }
-}
-
-/** Zoom buttons step by 0.25 like the web SDK toolbar. */
-private fun zoomStep(
-    direction: Int,
-    scale: Float,
-): Float = ((scale + direction * 0.25f) * 100).roundToInt() / 100f
 
 private fun describe(event: PsdkEvent): String =
     when (event) {

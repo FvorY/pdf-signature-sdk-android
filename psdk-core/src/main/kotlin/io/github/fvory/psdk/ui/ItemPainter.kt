@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.fvory.psdk.config.PsdkColors
 import io.github.fvory.psdk.model.ItemType
 import io.github.fvory.psdk.model.SignatureItem
 import kotlin.math.max
@@ -40,6 +41,7 @@ internal object ItemPainter {
         canResize: Boolean,
         active: Boolean,
         textMeasurer: TextMeasurer,
+        colors: PsdkColors,
     ) {
         val pxPerPoint = scale * density
         val topLeft = Offset((item.x * pxPerPoint).toFloat(), (item.y * pxPerPoint).toFloat())
@@ -57,8 +59,8 @@ internal object ItemPainter {
                     dstOffset = IntOffset(topLeft.x.roundToInt(), topLeft.y.roundToInt()),
                     dstSize = IntSize(max(1, size.width.roundToInt()), max(1, size.height.roundToInt())),
                 )
-            isStamp -> drawStampPlaceholder(item, topLeft, size, active, textMeasurer)
-            else -> drawSignaturePlaceholder(item, topLeft, size, active, textMeasurer)
+            isStamp -> drawStampPlaceholder(item, topLeft, size, active, textMeasurer, colors)
+            else -> drawSignaturePlaceholder(item, topLeft, size, active, textMeasurer, colors)
         }
 
         if (canDrag || canResize) {
@@ -70,7 +72,7 @@ internal object ItemPainter {
             }
         }
 
-        drawDeleteHandle(Offset(topLeft.x + size.width, topLeft.y))
+        drawDeleteHandle(Offset(topLeft.x + size.width, topLeft.y), colors)
         if (canResize) drawResizeHandle(Offset(topLeft.x + size.width, topLeft.y + size.height))
     }
 
@@ -80,20 +82,21 @@ internal object ItemPainter {
         size: Size,
         active: Boolean,
         textMeasurer: TextMeasurer,
+        colors: PsdkColors,
     ) {
         val corner = CornerRadius(CORNER.toPx())
         if (!active) {
             val glow = 4.dp.toPx()
             drawRoundRect(
-                Palette.accent.copy(alpha = 0.18f),
+                colors.accent.copy(alpha = 0.18f),
                 topLeft - Offset(glow, glow),
                 Size(size.width + glow * 2, size.height + glow * 2),
                 CornerRadius(corner.x + glow),
             )
         }
-        drawRoundRect(Palette.accent.copy(alpha = 0.12f), topLeft, size, corner)
+        drawRoundRect(colors.accent.copy(alpha = 0.12f), topLeft, size, corner)
         drawRoundRect(
-            Palette.accent.copy(alpha = 0.9f),
+            colors.accent.copy(alpha = 0.9f),
             topLeft,
             size,
             corner,
@@ -103,7 +106,7 @@ internal object ItemPainter {
                     pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 3.dp.toPx())),
                 ),
         )
-        drawLabel(item.label, topLeft, size, Palette.accent, textMeasurer)
+        drawLabel(item.label, topLeft, size, colors.accent, textMeasurer)
     }
 
     private fun DrawScope.drawStampPlaceholder(
@@ -112,13 +115,14 @@ internal object ItemPainter {
         size: Size,
         active: Boolean,
         textMeasurer: TextMeasurer,
+        colors: PsdkColors,
     ) {
         val center = Offset(topLeft.x + size.width / 2, topLeft.y + size.height / 2)
         val radius = max(1f, min(size.width, size.height) / 2 - 4.dp.toPx())
-        if (!active) drawCircle(Palette.danger.copy(alpha = 0.15f), radius + 4.dp.toPx(), center)
-        drawCircle(Palette.danger.copy(alpha = 0.08f), radius, center)
-        drawCircle(Palette.danger.copy(alpha = 0.9f), radius, center, style = Stroke(2.dp.toPx()))
-        drawLabel(item.label, topLeft, size, Palette.danger, textMeasurer)
+        if (!active) drawCircle(colors.danger.copy(alpha = 0.15f), radius + 4.dp.toPx(), center)
+        drawCircle(colors.danger.copy(alpha = 0.08f), radius, center)
+        drawCircle(colors.danger.copy(alpha = 0.9f), radius, center, style = Stroke(2.dp.toPx()))
+        drawLabel(item.label, topLeft, size, colors.danger, textMeasurer)
     }
 
     private fun DrawScope.drawLabel(
@@ -144,8 +148,11 @@ internal object ItemPainter {
         )
     }
 
-    private fun DrawScope.drawDeleteHandle(center: Offset) {
-        drawCircle(Palette.danger.copy(alpha = 0.85f), DELETE_RADIUS.toPx(), center)
+    private fun DrawScope.drawDeleteHandle(
+        center: Offset,
+        colors: PsdkColors,
+    ) {
+        drawCircle(colors.danger.copy(alpha = 0.85f), DELETE_RADIUS.toPx(), center)
         val arm = 3.5.dp.toPx()
         val stroke = 1.5.dp.toPx()
         drawLine(Color.White, center + Offset(-arm, -arm), center + Offset(arm, arm), stroke, StrokeCap.Round)

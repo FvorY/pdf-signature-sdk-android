@@ -6,19 +6,21 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.rememberTextMeasurer
 import io.github.fvory.psdk.PdfSignatureViewer
+import io.github.fvory.psdk.core.GlobalLocks
 import io.github.fvory.psdk.core.HitPart
 import io.github.fvory.psdk.core.HitTester
 import io.github.fvory.psdk.core.ItemBox
@@ -51,17 +53,19 @@ internal fun OverlayLayer(
     bitmaps: Map<String, Bitmap>,
 ) {
     val haptics = LocalHapticFeedback.current
+    val colors = LocalPsdkColors.current
     val textMeasurer = rememberTextMeasurer()
     var preview by remember { mutableStateOf<Preview?>(null) }
     val currentItems by rememberUpdatedState(items)
-    val locks = viewer.locks
-    val keepStampRatio = viewer.config.estampKeepAspectRatio
-    val useHaptics = viewer.config.ui.haptics
+    val config by viewer.configFlow.collectAsState()
+    val locks = GlobalLocks(config.disabled, config.disableDragging, config.disableDrag, config.disableResize)
+    val keepStampRatio = config.estampKeepAspectRatio
+    val useHaptics = config.ui.haptics
 
     Canvas(
         Modifier
             .fillMaxSize()
-            .alpha(if (locks.disabled) 0.5f else 1f)
+            .graphicsLayer { alpha = if (locks.disabled) 0.5f else 1f }
             .pointerInput(page, scale, locks, keepStampRatio, pageSize) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = true)
@@ -154,6 +158,7 @@ internal fun OverlayLayer(
                 canResize = LockRules.canResize(locks, item),
                 active = active?.id == item.id,
                 textMeasurer = textMeasurer,
+                colors = colors,
             )
         }
     }

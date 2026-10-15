@@ -21,21 +21,49 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.fvory.psdk.config.PsdkLabels
 
-/** "No Document Loaded" screen (B-INIT-03). Shows the load error under it when there is one. */
+/**
+ * "No Document Loaded" screen (B-INIT-03), with an "Open PDF" button when uploading is possible
+ * (spec §13.4). Shows the load error instead of the subtitle when there is one.
+ */
 @Composable
 internal fun EmptyState(
     labels: PsdkLabels,
     error: Throwable?,
+    onUpload: (() -> Unit)?,
 ) {
+    val colors = LocalPsdkColors.current
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        DocumentIcon()
+        val muted = colors.textMuted
+        Canvas(Modifier.size(48.dp)) {
+            // The web SDK's empty-state icon (file with a plus sign) on a 24-unit grid
+            val unit = size.minDimension / 24f
+            val stroke = Stroke(width = 1.5f * unit, cap = StrokeCap.Round, join = StrokeJoin.Round)
+            val outline =
+                Path().apply {
+                    moveTo(14 * unit, 2 * unit)
+                    lineTo(6 * unit, 2 * unit)
+                    quadraticTo(4 * unit, 2 * unit, 4 * unit, 4 * unit)
+                    lineTo(4 * unit, 20 * unit)
+                    quadraticTo(4 * unit, 22 * unit, 6 * unit, 22 * unit)
+                    lineTo(18 * unit, 22 * unit)
+                    quadraticTo(20 * unit, 22 * unit, 20 * unit, 20 * unit)
+                    lineTo(20 * unit, 8 * unit)
+                    close()
+                    moveTo(14 * unit, 2 * unit)
+                    lineTo(14 * unit, 8 * unit)
+                    lineTo(20 * unit, 8 * unit)
+                }
+            drawPath(outline, muted, style = stroke)
+            drawLine(muted, Offset(12 * unit, 12 * unit), Offset(12 * unit, 18 * unit), stroke.width, StrokeCap.Round)
+            drawLine(muted, Offset(9 * unit, 15 * unit), Offset(15 * unit, 15 * unit), stroke.width, StrokeCap.Round)
+        }
         Text(
             text = if (error == null) labels.emptyTitle else labels.errorLoad,
-            color = if (error == null) Palette.textPrimary else Palette.danger,
+            color = if (error == null) colors.textPrimary else colors.danger,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
@@ -43,37 +71,20 @@ internal fun EmptyState(
         )
         Text(
             text = error?.message ?: labels.emptySubtitle,
-            color = Palette.textSecondary,
+            color = colors.textSecondary,
             fontSize = 13.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 6.dp),
         )
-    }
-}
-
-/** Same outline as the web SDK's empty-state icon (file with a plus sign), drawn on a 24-unit grid. */
-@Composable
-private fun DocumentIcon() {
-    Canvas(Modifier.size(48.dp)) {
-        val unit = size.minDimension / 24f
-        val stroke = Stroke(width = 1.5f * unit, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        val outline =
-            Path().apply {
-                moveTo(14 * unit, 2 * unit)
-                lineTo(6 * unit, 2 * unit)
-                quadraticTo(4 * unit, 2 * unit, 4 * unit, 4 * unit)
-                lineTo(4 * unit, 20 * unit)
-                quadraticTo(4 * unit, 22 * unit, 6 * unit, 22 * unit)
-                lineTo(18 * unit, 22 * unit)
-                quadraticTo(20 * unit, 22 * unit, 20 * unit, 20 * unit)
-                lineTo(20 * unit, 8 * unit)
-                close()
-                moveTo(14 * unit, 2 * unit)
-                lineTo(14 * unit, 8 * unit)
-                lineTo(20 * unit, 8 * unit)
-            }
-        drawPath(outline, Palette.textMuted, style = stroke)
-        drawLine(Palette.textMuted, Offset(12 * unit, 12 * unit), Offset(12 * unit, 18 * unit), stroke.width, StrokeCap.Round)
-        drawLine(Palette.textMuted, Offset(9 * unit, 15 * unit), Offset(15 * unit, 15 * unit), stroke.width, StrokeCap.Round)
+        if (onUpload != null) {
+            ToolbarButton(
+                PsdkIcons.upload,
+                labels.uploadBtn,
+                onUpload,
+                label = labels.uploadBtn,
+                kind = ButtonKind.ACCENT,
+                modifier = Modifier.padding(top = 16.dp),
+            )
+        }
     }
 }
