@@ -14,7 +14,9 @@ import io.github.fvory.psdk.config.UploadDecision
 import io.github.fvory.psdk.core.GlobalLocks
 import io.github.fvory.psdk.core.IdGenerator
 import io.github.fvory.psdk.core.ItemBox
+import io.github.fvory.psdk.core.ItemGeometry
 import io.github.fvory.psdk.core.ItemStore
+import io.github.fvory.psdk.core.LockRules
 import io.github.fvory.psdk.core.PaginationController
 import io.github.fvory.psdk.core.ZoomMath
 import io.github.fvory.psdk.engine.DocumentEngine
@@ -474,6 +476,29 @@ public class PdfSignatureViewer internal constructor(
 
     internal val locks: GlobalLocks
         get() = GlobalLocks(config.disabled, config.disableDragging, config.disableDrag, config.disableResize)
+
+    /** Accessibility "move" action (B-A11Y-02): same lock rules as dragging, sends `signatureMoved`. */
+    internal fun nudgeItem(
+        id: String,
+        dx: Double,
+        dy: Double,
+    ) {
+        val item = store.get(id) ?: return
+        if (isDestroyed || !LockRules.canDrag(locks, item)) return
+        val page = mutableState.value.pageSizes.getOrNull(item.page - 1) ?: return
+        store.move(id, ItemGeometry.nudge(ItemBox(item.x, item.y, item.width, item.height), dx, dy, page.width, page.height))
+    }
+
+    /** Accessibility "bigger/smaller" action: same lock rules as the resize handle. */
+    internal fun scaleItem(
+        id: String,
+        factor: Double,
+    ) {
+        val item = store.get(id) ?: return
+        if (isDestroyed || !LockRules.canResize(locks, item)) return
+        val page = mutableState.value.pageSizes.getOrNull(item.page - 1) ?: return
+        store.move(id, ItemGeometry.scaleBy(ItemBox(item.x, item.y, item.width, item.height), factor, page.width, page.height))
+    }
 
     /** Commits a drag or resize from the overlay and sends `signatureMoved`. */
     internal fun commitItemBox(
