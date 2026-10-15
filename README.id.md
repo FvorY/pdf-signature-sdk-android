@@ -11,6 +11,8 @@ sehingga backend yang sama bisa langsung menyelesaikan proses tanda tangan.
 
 English: [README.md](README.md)
 
+Dokumentasi penggunaan: [DOCUMENTATION.id.md](DOCUMENTATION.id.md) · [English documentation](DOCUMENTATION.en.md)
+
 ## Instalasi
 
 Tambahkan `maven("https://jitpack.io")` di `settings.gradle.kts`, lalu:
