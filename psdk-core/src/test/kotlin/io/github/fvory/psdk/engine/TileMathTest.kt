@@ -12,7 +12,7 @@ class TileMathTest {
         val full = TileMath.fullSize(595.28, 841.89, 4f, 2.75f)
         val capped = RenderSize.compute(595.28, 841.89, 4f, 2.75f)
         assertEquals(6548, full.width)
-        assertEquals(RenderSize.MAX_SIDE, capped.height)
+        assertTrue(capped.width.toLong() * capped.height <= RenderSize.MAX_PIXELS)
         assertTrue(TileMath.needsDetail(full, capped))
     }
 

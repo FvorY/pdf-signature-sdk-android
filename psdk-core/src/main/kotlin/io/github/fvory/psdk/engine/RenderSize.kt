@@ -11,12 +11,14 @@ internal data class PixelSize(
 )
 
 /**
- * Bitmap size for a page (spec §15.1 R2): page points × scale × density, capped so the longest
- * side is at most [MAX_SIDE] px and the bitmap has at most [MAX_PIXELS] pixels.
+ * Bitmap size for a whole page (spec §15.1 R2): page points × scale × density, capped so the
+ * longest side is at most [MAX_SIDE] px and the bitmap has at most [MAX_PIXELS] pixels (16 MB).
+ * Beyond the cap the visible part is rendered sharp by [TileMath], so the cap only bounds memory:
+ * with 16 MP pages a 300-page document used about 450 MB at 400% zoom on a 1080p phone.
  */
 internal object RenderSize {
-    const val MAX_SIDE: Int = 4096
-    const val MAX_PIXELS: Int = 16_000_000
+    const val MAX_SIDE: Int = 3072
+    const val MAX_PIXELS: Int = 4_000_000
 
     fun compute(
         pageWidth: Double,

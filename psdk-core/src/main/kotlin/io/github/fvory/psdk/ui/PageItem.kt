@@ -40,6 +40,7 @@ import io.github.fvory.psdk.engine.RenderSize
 import io.github.fvory.psdk.engine.TileMath
 import io.github.fvory.psdk.model.PageSize
 import io.github.fvory.psdk.model.SignatureItem
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 
@@ -66,6 +67,9 @@ internal fun PageItem(
     var bitmap by remember(documentId, page) { mutableStateOf<ImageBitmap?>(null) }
 
     LaunchedEffect(documentId, page, pixels) {
+        // A page flung past leaves composition within a few frames: wait a little so it is never
+        // rendered, which saves work on the render thread and short-lived 5–16 MB bitmaps.
+        if (bitmap == null) delay(FIRST_RENDER_DELAY_MS)
         viewer.renderForDisplay(page, pixels.width, pixels.height)?.let { bitmap = it.asImageBitmap() }
     }
 
@@ -137,6 +141,8 @@ private class Detail(
 )
 
 private const val DETAIL_DELAY_MS = 150L
+
+private const val FIRST_RENDER_DELAY_MS = 60L
 
 /** A thin edge and a soft line under the page, drawn without an offscreen layer. */
 private fun DrawScope.drawPageShadow() {
