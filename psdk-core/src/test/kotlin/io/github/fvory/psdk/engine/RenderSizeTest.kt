@@ -8,13 +8,22 @@ import org.junit.Test
 class RenderSizeTest {
     @Test
     fun normalSizeIsPointsTimesScaleTimesDensity() {
-        assertEquals(PixelSize(1785, 2526), RenderSize.compute(595.0, 842.0, 1f, 3f))
+        // Fit-to-width on a 1080 px phone needs no cap
+        assertEquals(PixelSize(1047, 1482), RenderSize.compute(595.0, 842.0, 0.64f, 2.75f))
     }
 
     @Test
     fun longestSideIsCappedKeepingAspectRatio() {
-        val size = RenderSize.compute(595.0, 842.0, 4f, 3f)
+        // A very long page hits the side cap before the pixel cap
+        val size = RenderSize.compute(100.0, 2000.0, 4f, 3f)
         assertEquals(RenderSize.MAX_SIDE, size.height)
+        assertEquals(100.0 / 2000.0, size.width.toDouble() / size.height, 0.001)
+    }
+
+    @Test
+    fun a4AtHighZoomIsCappedAt4Megapixels() {
+        val size = RenderSize.compute(595.0, 842.0, 4f, 2.75f)
+        assertTrue(size.width.toLong() * size.height <= RenderSize.MAX_PIXELS)
         assertEquals(595.0 / 842.0, size.width.toDouble() / size.height, 0.001)
     }
 

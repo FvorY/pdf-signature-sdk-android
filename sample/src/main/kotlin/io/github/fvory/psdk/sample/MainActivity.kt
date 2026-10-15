@@ -162,6 +162,18 @@ private fun SampleScreen() {
                 },
                 label = { Text("Cek Pdfium") },
             )
+            // Debug builds ship a 300-page PDF for memory and scrolling tests
+            if (context.assets
+                    .list("")
+                    .orEmpty()
+                    .contains("big.pdf")
+            ) {
+                FilterChip(
+                    selected = false,
+                    onClick = { scope.launch { loadSafely(viewer, PdfSource.AssetSource("big.pdf"), log) } },
+                    label = { Text("PDF 300 hlm") },
+                )
+            }
             FilterChip(selected = showJson, onClick = { showJson = !showJson }, label = { Text("JSON") })
             for ((asset, title) in listOf("password.pdf" to "PDF password AES", "password-rc4.pdf" to "PDF password RC4")) {
                 FilterChip(
@@ -272,3 +284,15 @@ private fun describe(event: PsdkEvent): String =
 private fun SignatureItem.short(): String = "$label p$page x=${x.f()} y=${y.f()} w=${width.f()} h=${height.f()}"
 
 private fun Double.f(): String = "%.1f".format(this)
+
+private suspend fun loadSafely(
+    viewer: PdfSignatureViewer,
+    source: PdfSource,
+    log: MutableList<String>,
+) {
+    try {
+        viewer.loadDocument(source)
+    } catch (e: Exception) {
+        log.add(0, "Error: ${e.message}")
+    }
+}

@@ -5,10 +5,11 @@ Every page has a 50-point grid labelled in the SDK's coordinate system (origin a
 the visible box, y down, PDF points), so positions can be checked by eye.
 
 Usage:
-  python3 scripts/make_sample_pdf.py [--set sample|geometry] <output.pdf>
+  python3 scripts/make_sample_pdf.py [--set sample|geometry|big] <output.pdf>
 
 Sets:
   sample    A4, A4 landscape, US Letter and a /Rotate 90 page (sample app, parity)
+  big       300 pages cycling through several sizes (memory and scrolling tests)
   geometry  /Rotate 0/90/180/270, a CropBox inside a larger MediaBox, CropBox with /Rotate 90 and a
             MediaBox that does not start at 0,0 (parity of page sizes and coordinates)
 """
@@ -37,6 +38,18 @@ SETS = {
         ("CropBox 600x800 inside MediaBox 700x1000", BIG, CROP, 0),
         ("CropBox 600x800 + /Rotate 90", BIG, CROP, 90),
         ("MediaBox [100 200 712 992] (Letter, not at 0,0)", (100.0, 200.0, 712.0, 992.0), None, 0),
+    ],
+    # 300 pages cycling through the sizes above, for memory and scrolling tests
+    "big": [
+        (f"Big document page, {name}", media, crop, rotate)
+        for _ in range(60)
+        for name, media, crop, rotate in [
+            ("A4 portrait", A4, None, 0),
+            ("A4 landscape", A4_LANDSCAPE, None, 0),
+            ("US Letter", LETTER, None, 0),
+            ("A4 /Rotate 90", A4, None, 90),
+            ("CropBox", BIG, CROP, 0),
+        ]
     ],
 }
 

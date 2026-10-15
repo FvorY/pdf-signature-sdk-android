@@ -26,6 +26,11 @@ project uses [Semantic Versioning](https://semver.org/).
   device has the S extension 13 system update. Tested with AES-256 and RC4-128 files.
 
 ### Changed
+- Whole-page bitmaps are capped at 4 MP / 3072 px (was 16 MP / 4096 px); sharpness above that
+  comes from the visible-region detail. A page now takes at most 16 MB instead of 64 MB.
+- A page is rendered only after it stays on screen for 60 ms, so pages flung past are skipped.
+- Measured on a 1080p phone with a 300-page PDF: no crash or out-of-memory while scrolling to the
+  end and zooming to 400%; after 10 s idle the app is back to about 155 MB PSS.
 - Zooming with the buttons, menu or `setScale` centers the content horizontally. Before, a page
   narrower than the widest page drifted off screen at high zoom (blank view from about 325%).
 - The page shadow and the disabled fade are drawn directly instead of through page-sized layers.
