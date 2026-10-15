@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import io.github.fvory.psdk.PdfSignatureViewer
 import io.github.fvory.psdk.PsdkState
 import io.github.fvory.psdk.config.PsdkConfig
+import io.github.fvory.psdk.config.PsdkLogLevel
 import io.github.fvory.psdk.config.SkeletonOptions
 import io.github.fvory.psdk.model.PdfSource
 
@@ -43,6 +44,7 @@ internal fun ViewerRoot(
         val state by viewer.state.collectAsState()
         val picker by viewer.picker.collectAsState()
         val skeleton by viewer.skeleton.collectAsState()
+        val passwordPrompt by viewer.passwordPrompt.collectAsState()
         val colors = LocalPsdkColors.current
         val upload = rememberUploadAction(viewer)
         var goToPageOpen by remember { mutableStateOf(false) }
@@ -84,6 +86,7 @@ internal fun ViewerRoot(
             picker?.let { PickerSheet(viewer, it, config, tablet) }
         }
         if (goToPageOpen) GoToPageDialog(viewer, state, config, onDismiss = { goToPageOpen = false })
+        passwordPrompt?.let { PasswordDialog(viewer, it, config.labels) }
     }
 }
 
@@ -104,7 +107,8 @@ private fun ViewerArea(
         Box(Modifier.fillMaxSize().then(if (blur != null) Modifier.blur(blur) else Modifier)) {
             when {
                 state.isLoaded -> PageList(viewer, state, bottomPadding = if (showPill) 80.dp else 16.dp)
-                !state.isLoading -> EmptyState(config.labels, state.error, upload)
+                !state.isLoading ->
+                    EmptyState(config.labels, state.error, upload, showErrorDetails = config.logLevel == PsdkLogLevel.DEBUG)
             }
             if (state.isLoading) CircularProgressIndicator(Modifier.align(Alignment.Center), color = colors.accent)
         }

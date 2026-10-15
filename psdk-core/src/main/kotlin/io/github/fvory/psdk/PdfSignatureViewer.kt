@@ -17,6 +17,7 @@ import io.github.fvory.psdk.core.ItemStore
 import io.github.fvory.psdk.core.PaginationController
 import io.github.fvory.psdk.core.ZoomMath
 import io.github.fvory.psdk.engine.DocumentEngine
+import io.github.fvory.psdk.engine.PasswordFlow
 import io.github.fvory.psdk.engine.PasswordRequiredException
 import io.github.fvory.psdk.engine.PdfRendererEngine
 import io.github.fvory.psdk.engine.RenderSize
@@ -35,6 +36,7 @@ import io.github.fvory.psdk.model.SignatureItem
 import io.github.fvory.psdk.ui.StaticOverlayPainter
 import io.github.fvory.psdk.util.Logger
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -97,6 +99,11 @@ public class PdfSignatureViewer(
     /** Skeleton overlay options while it is shown, null when hidden. */
     internal val skeleton = MutableStateFlow<SkeletonOptions?>(null)
 
+    /** Built-in password dialog state while a password is needed, null otherwise. */
+    internal val passwordPrompt = MutableStateFlow<PasswordPrompt?>(null)
+
+    private var pendingPassword: CompletableDeferred<String?>? = null
+
     /** Observable snapshot of the viewer for Compose (`collectAsState`) and Flow users. */
     public val state: StateFlow<PsdkState> = mutableState.asStateFlow()
 
@@ -158,13 +165,19 @@ public class PdfSignatureViewer(
     public suspend fun loadDocument(source: PdfSource) {
         ensureAlive()
         val token = ++loadToken
+        cancelPassword()
         closeEngine()
         mutableState.update {
             it.copy(isLoading = true, isLoaded = false, pageSizes = emptyList(), error = null, isPasswordProtected = false)
         }
         try {
             val file = resolver.resolve(source)
-            val opened = PdfRendererEngine.open(file)
+            val opened =
+                PasswordFlow.open(
+                    open = { password -> PdfRendererEngine.open(file, password) },
+                    ask = { isIncorrect -> askPassword(token, isIncorrect) },
+                )
+            passwordPrompt.value = null
             if (token != loadToken || isDestroyed) {
                 opened.close()
                 return
@@ -192,6 +205,7 @@ public class PdfSignatureViewer(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
+            if (token == loadToken) passwordPrompt.value = null
             if (token != loadToken) throw e
             val error =
                 when (e) {
@@ -199,7 +213,10 @@ public class PdfSignatureViewer(
                     is PasswordRequiredException -> PsdkException.PasswordNotSupported()
                     else -> PsdkException.Corrupted(e)
                 }
-            resetToEmpty(error, passwordProtected = e is PasswordRequiredException)
+            resetToEmpty(
+                error,
+                passwordProtected = mutableState.value.isPasswordProtected || error is PsdkException.PasswordNotSupported,
+            )
             throw error
         }
     }
@@ -413,6 +430,8 @@ public class PdfSignatureViewer(
         mutableItemBitmaps.value = emptyMap()
         picker.value = null
         skeleton.value = null
+        cancelPassword()
+        passwordPrompt.value = null
         mutableState.value = PsdkState()
     }
 
@@ -512,6 +531,18 @@ public class PdfSignatureViewer(
         }
     }
 
+    /** Built-in dialog: the user entered a password (B-PWD-02). */
+    internal fun submitPassword(password: String) {
+        val pending = pendingPassword ?: return
+        passwordPrompt.update { it?.copy(submitting = true) }
+        pending.complete(password)
+    }
+
+    /** Built-in dialog or a new load: stop waiting for a password (B-PWD-04). */
+    internal fun cancelPassword() {
+        pendingPassword?.complete(null)
+    }
+
     /** Runs the upload flow in the viewer's scope, so it survives the UI being recreated. */
     internal fun startUpload(picked: PdfSource) {
         if (!isDestroyed) scope.launch { handleUpload(picked) }
@@ -554,6 +585,33 @@ public class PdfSignatureViewer(
         val scale = fitToWidthScale() ?: return
         fitWidthPending = false
         mutableState.update { it.copy(scale = scale) }
+    }
+
+    /**
+     * Asks for a password through the `passwordRequested` event and, unless turned off, the built-in
+     * dialog (B-LOAD-04). Returns null when cancelled or when a newer load replaced this one.
+     */
+    private suspend fun askPassword(
+        token: Long,
+        isIncorrect: Boolean,
+    ): String? {
+        if (token != loadToken || isDestroyed) return null
+        mutableState.update { it.copy(isPasswordProtected = true) }
+        val answer = CompletableDeferred<String?>()
+        pendingPassword = answer
+        passwordPrompt.value = if (config.ui.passwordDialog) PasswordPrompt(isIncorrect) else null
+        bus.emit(
+            PsdkEvent.PasswordRequested(
+                isIncorrect = isIncorrect,
+                submit = { if (pendingPassword === answer) submitPassword(it) },
+                dismiss = { if (pendingPassword === answer) answer.complete(null) },
+            ),
+        )
+        return try {
+            answer.await()
+        } finally {
+            if (pendingPassword === answer) pendingPassword = null
+        }
     }
 
     private fun openPicker(type: ItemType) {
@@ -632,6 +690,12 @@ public class PdfSignatureViewer(
     private fun ensureAlive() {
         if (isDestroyed) throw PsdkException.Destroyed()
     }
+
+    /** What the built-in password dialog shows. */
+    internal data class PasswordPrompt(
+        val isIncorrect: Boolean,
+        val submitting: Boolean = false,
+    )
 
     internal data class SavedScroll(
         val index: Int = 0,

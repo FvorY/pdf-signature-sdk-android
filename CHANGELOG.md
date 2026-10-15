@@ -7,6 +7,15 @@ project uses [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Password-protected PDFs (M4): `passwordRequested` event with `updatePassword` / `cancel`, a
+  built-in password dialog (`ui.passwordDialog`), and `PsdkException.PasswordCancelled`.
+  Android 15+ uses `PdfRenderer` with `LoadParams`; Android 12–14 use `PdfRendererPreV` when the
+  device has the S extension 13 system update. Tested with AES-256 and RC4-128 files.
+
+### Changed
+- The 🔒 badge only shows while an encrypted document is open, and a cancelled password prompt
+  returns to the normal empty state. Exception messages in the empty state are only shown with
+  `logLevel = DEBUG`.
 - Viewer UI (M3): phone layout (top bar with ⋮ menu, bottom bar, floating page indicator, thumbnail
   strip) and tablet layout (web-style toolbar, thumbnail sidebar), switching at 600 dp.
 - Signature and E-Materai pickers (`signatureOptions`, `estampOptions`, `groupByCategory`),
