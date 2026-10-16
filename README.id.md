@@ -78,6 +78,9 @@ JitPack dapat membuild commit hash selama API masih dalam tahap preview.
 
 ## Mulai cepat: Jetpack Compose
 
+Di contoh, `uri`, `file`, `bytes`, dan `context` mewakili nilai milikmu sendiri; selebihnya adalah
+API SDK.
+
 ```kotlin
 @Composable
 fun SignScreen(uri: Uri) {
@@ -159,7 +162,7 @@ awal kiri-bawah.
 
 ```kotlin
 val subscription = viewer.on<PsdkEvent.SignaturePlaced> { event ->
-    sendToBackend(event.item.toJson())
+    Log.d("psdk", event.item.toJsonString()) // kirim ini ke backend
 }
 
 subscription.cancel()

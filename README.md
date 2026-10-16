@@ -76,6 +76,9 @@ release; JitPack can build a commit hash while the API is in preview.
 
 ## Quick start: Jetpack Compose
 
+In the samples, `uri`, `file`, `bytes` and `context` stand for your own values; everything else is
+SDK API.
+
 ```kotlin
 @Composable
 fun SignScreen(uri: Uri) {
@@ -158,7 +161,7 @@ origin.
 
 ```kotlin
 val subscription = viewer.on<PsdkEvent.SignaturePlaced> { event ->
-    sendToBackend(event.item.toJson())
+    Log.d("psdk", event.item.toJsonString()) // send this to your backend
 }
 
 subscription.cancel()
