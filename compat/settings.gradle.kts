@@ -18,6 +18,8 @@ dependencyResolutionManagement {
         mavenLocal()
         google()
         mavenCentral()
+        // For checking a JitPack build: -PsdkGroup=com.github.FvorY.pdf-signature-sdk-android -PsdkVersion=<tag or commit>
+        maven("https://jitpack.io")
     }
 }
 

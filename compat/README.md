@@ -10,4 +10,7 @@ gradle -p compat :app:assembleRelease -Pagp=8.9.1 -Pkotlin=2.1.0 -PcompileSdk=36
 gradle -p compat :app:assembleRelease -Pagp=8.9.1 -Pkotlin=2.2.21 -PcompileSdk=36 -Ppdfium=true
 ```
 
+To check a JitPack build instead of Maven Local, add
+`-PsdkGroup=com.github.FvorY.pdf-signature-sdk-android -PsdkVersion=<tag or commit>`.
+
 Use Gradle 8.11.1 (the oldest version AGP 8.9 supports).
