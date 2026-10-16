@@ -25,6 +25,7 @@ Documentation: [DOCUMENTATION.en.md](DOCUMENTATION.en.md) · [Dokumentasi Bahasa
 - Web-parity methods, events, JSON output, picker options and skeleton overlay
 - Jetpack Compose API plus a classic `View` for XML layouts
 - Light, dark and system themes; every UI string can be replaced
+- `secureScreen` option that blocks screenshots and screen recording
 - Optional `psdk-pdfium` module that opens password-protected PDFs on Android 14 and lower
 - Only AndroidX and kotlinx-coroutines as dependencies
 
@@ -86,6 +87,12 @@ declare the `INTERNET` permission when using remote sources.
 | `psdk-pdfium` | Optional Pdfium rendering engine |
 | `sample` | Demo app |
 | `parity/` | Fixtures that compare output with the web SDK |
+
+## Build & test
+
+```bash
+./gradlew ktlintCheck :psdk-core:testDebugUnitTest :sample:assembleDebug
+```
 
 ## Contributing
 

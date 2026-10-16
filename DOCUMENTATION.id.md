@@ -55,10 +55,12 @@ JitPack juga dapat memakai commit hash.
 tersedia saat rotasi atau proses aplikasi dipulihkan.
 
 ```kotlin
+import android.net.Uri
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import io.github.fvory.psdk.PdfSignatureViewer
-import io.github.fvory.psdk.PsdkConfig
+import io.github.fvory.psdk.config.PsdkConfig
 import io.github.fvory.psdk.model.PdfSource
 import io.github.fvory.psdk.rememberPdfSignatureViewer
 
@@ -278,6 +280,14 @@ val config = PsdkConfig(
 
 `secureScreen = true` memasang `FLAG_SECURE` pada window untuk mencegah screenshot, screen
 recording, dan preview recent apps ketika viewer ditampilkan.
+
+Ubah opsi setelah viewer dibuat tanpa memuat ulang dokumen:
+
+```kotlin
+viewer.updateConfig { it.copy(disabled = true) }
+```
+
+`PsdkLabels.indonesian()` menyediakan label bahasa Indonesia untuk semua teks UI.
 
 ## Lifecycle
 

@@ -55,10 +55,12 @@ also build a commit hash.
 survive rotation and process restoration.
 
 ```kotlin
+import android.net.Uri
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import io.github.fvory.psdk.PdfSignatureViewer
-import io.github.fvory.psdk.PsdkConfig
+import io.github.fvory.psdk.config.PsdkConfig
 import io.github.fvory.psdk.model.PdfSource
 import io.github.fvory.psdk.rememberPdfSignatureViewer
 
@@ -277,6 +279,14 @@ val config = PsdkConfig(
 
 `secureScreen = true` sets `FLAG_SECURE` on the window to prevent screenshots, screen recording,
 and the recent-apps preview while the viewer is shown.
+
+Change options later without reloading the document:
+
+```kotlin
+viewer.updateConfig { it.copy(disabled = true) }
+```
+
+`PsdkLabels.indonesian()` provides Indonesian labels for every UI string.
 
 ## Lifecycle
 
