@@ -7,6 +7,9 @@ project uses [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `viewer.once<PsdkEvent.X> { }` shortcut, like `on<T>`.
+- Guides (EN/ID) rewritten with the same 20 sections as the iOS guides: built-in UI, themes,
+  upload, skeleton, page images, errors, all options and platform differences.
 - English and Indonesian usage guides (`DOCUMENTATION.en.md`, `DOCUMENTATION.id.md`).
 - `secureScreen` option (M4): sets `FLAG_SECURE` while the viewer is shown, blocking screenshots,
   screen recording and the recent-apps preview; removed again only if the SDK added it.

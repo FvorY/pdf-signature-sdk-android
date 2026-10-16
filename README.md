@@ -26,6 +26,8 @@ Languages and full API documentation:
 - Signature and E-Materai placement with drag, resize, delete, and per-item locks.
 - Kotlin API, events, `StateFlow`, and JSON output compatible with the web SDK.
 - Jetpack Compose and classic XML/View integration.
+- Built-in toolbar for phones and tablets (upload, add, clear, pages, zoom, theme), page indicator,
+  thumbnails, status line and empty state, the same as the iOS SDK.
 - Light, dark, and system themes, custom labels, picker options, skeleton loading, and `FLAG_SECURE`.
 - Optional `psdk-pdfium` module for password-protected PDFs on Android 14 and lower.
 

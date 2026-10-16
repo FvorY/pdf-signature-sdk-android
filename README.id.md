@@ -28,6 +28,8 @@ Bahasa dan dokumentasi lengkap:
 - Penempatan tanda tangan dan E-Materai dengan drag, resize, hapus, dan kunci per item.
 - API Kotlin, event, `StateFlow`, dan output JSON yang kompatibel dengan web SDK.
 - Dukungan Jetpack Compose dan XML/View klasik.
+- Toolbar bawaan untuk ponsel dan tablet (upload, tambah, hapus semua, halaman, zoom, tema), indikator
+  halaman, thumbnail, status bar, dan empty state, sama seperti SDK iOS.
 - Tema terang, gelap, dan sistem; label, picker, skeleton loading, dan `FLAG_SECURE`.
 - Modul opsional `psdk-pdfium` untuk PDF berpassword di Android 14 ke bawah.
 
