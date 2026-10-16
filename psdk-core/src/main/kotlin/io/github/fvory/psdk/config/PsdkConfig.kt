@@ -57,6 +57,12 @@ public data class PsdkConfig(
      * Off by default, like the web SDK, where only the buttons, page input and thumbnails are locked.
      */
     public val lockScrollWhenPaginationLocked: Boolean = false,
+    /**
+     * Block screenshots, screen recording and the recent-apps preview while the viewer is shown, by
+     * setting `FLAG_SECURE` on the window. The SDK's dialogs and sheets inherit it. The flag is only
+     * removed again if the SDK added it.
+     */
+    public val secureScreen: Boolean = false,
     public val labels: PsdkLabels = PsdkLabels(),
     public val ui: PsdkUiConfig = PsdkUiConfig(),
     public val logLevel: PsdkLogLevel = PsdkLogLevel.ERROR,

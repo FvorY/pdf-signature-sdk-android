@@ -196,6 +196,11 @@ private fun SampleScreen() {
                 label = { Text("Nonaktif") },
             )
             FilterChip(
+                selected = config.secureScreen,
+                onClick = { viewer.updateConfig { it.copy(secureScreen = !it.secureScreen) } },
+                label = { Text("Blokir screenshot") },
+            )
+            FilterChip(
                 selected = config.disableDragging,
                 onClick = { viewer.updateConfig { it.copy(disableDragging = !it.disableDragging) } },
                 label = { Text("Kunci item") },

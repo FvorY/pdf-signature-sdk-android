@@ -11,6 +11,7 @@ import android.graphics.pdf.RenderParams
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.ext.SdkExtensions
+import androidx.core.graphics.createBitmap
 import io.github.fvory.psdk.error.PsdkException
 import io.github.fvory.psdk.model.PageSize
 import kotlinx.coroutines.CoroutineScope
@@ -56,7 +57,7 @@ internal class PdfRendererEngine private constructor(
         withContext(renderDispatcher) {
             mutex.withLock {
                 if (closed) throw PsdkException.NotLoaded()
-                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                val bitmap = createBitmap(width, height)
                 bitmap.eraseColor(Color.WHITE)
                 renderer.render(page - 1, bitmap)
                 bitmap
@@ -82,7 +83,7 @@ internal class PdfRendererEngine private constructor(
                         setScale((fullWidth / size.width).toFloat(), (fullHeight / size.height).toFloat())
                         postTranslate(-left.toFloat(), -top.toFloat())
                     }
-                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                val bitmap = createBitmap(width, height)
                 bitmap.eraseColor(Color.WHITE)
                 renderer.render(page - 1, bitmap, matrix)
                 bitmap

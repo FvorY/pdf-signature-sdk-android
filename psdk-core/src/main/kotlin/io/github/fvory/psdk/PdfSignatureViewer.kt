@@ -443,6 +443,10 @@ public class PdfSignatureViewer internal constructor(
         listener: PsdkListener<E>,
     ): PsdkSubscription = bus.on(type, listener, once = true)
 
+    /** Kotlin shortcut: `viewer.once<PsdkEvent.DocumentLoaded> { … }`. */
+    public inline fun <reified E : PsdkEvent> once(noinline listener: (E) -> Unit): PsdkSubscription =
+        once(E::class.java, PsdkListener { listener(it) })
+
     /** Stops a listener (web: `off`). Same as `subscription.cancel()`. */
     public fun off(subscription: PsdkSubscription) {
         subscription.cancel()

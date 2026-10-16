@@ -16,6 +16,8 @@ android {
     defaultConfig {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 24
+        // The code only needs API 35 to compile; AGP would otherwise require compileSdk 36 in apps.
+        aarMetadata { minCompileSdk = 35 }
         consumerProguardFiles("consumer-rules.pro")
         buildConfigField("String", "SDK_VERSION", "\"$sdkVersion\"")
     }
@@ -25,9 +27,15 @@ android {
         buildConfig = true
     }
 
+    lint {
+        // Dependency versions are held back on purpose so older apps can still use the SDK.
+        disable += setOf("GradleDependency", "NewerVersionAvailable")
+    }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        // Java 8 bytecode, like AndroidX, so apps with jvmTarget 1.8 or 11 can inline SDK functions
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     testOptions {
@@ -44,7 +52,10 @@ android {
 
 kotlin {
     explicitApi()
+    // Publish a kotlin-stdlib dependency that apps on Kotlin 2.1 can still read.
+    coreLibrariesVersion = "2.1.0"
     compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
         // Keep the published metadata readable by apps on older Kotlin compilers.
         apiVersion.set(KotlinVersion.KOTLIN_2_2)
         languageVersion.set(KotlinVersion.KOTLIN_2_2)
@@ -63,7 +74,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.viewmodel.savedstate)
-    implementation(libs.kotlinx.coroutines.android)
+    api(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit)
     testImplementation(libs.org.json)

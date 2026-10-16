@@ -7,7 +7,13 @@ project uses [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- Sharp pages at high zoom (M4): when the whole-page bitmap hits its 4096 px cap, the visible part
+- `viewer.once<PsdkEvent.X> { }` shortcut, like `on<T>`.
+- Guides (EN/ID) rewritten with the same 20 sections as the iOS guides: built-in UI, themes,
+  upload, skeleton, page images, errors, all options and platform differences.
+- English and Indonesian usage guides (`DOCUMENTATION.en.md`, `DOCUMENTATION.id.md`).
+- `secureScreen` option (M4): sets `FLAG_SECURE` while the viewer is shown, blocking screenshots,
+  screen recording and the recent-apps preview; removed again only if the SDK added it.
+- Sharp pages at high zoom (M4): when the whole-page bitmap hits its size cap, the visible part
   is rendered again at full resolution with `renderRegion` (PdfRenderer and Pdfium) once scrolling
   settles. Instrumented tests check that regions match whole-page renders on rotated and cropped pages.
 - Optional `psdk-pdfium` engine (io.legere:pdfiumandroid, Apache-2.0) for password-protected PDFs
@@ -25,21 +31,6 @@ project uses [Semantic Versioning](https://semver.org/).
   Android 15+ uses `PdfRenderer` with `LoadParams`; Android 12–14 use `PdfRendererPreV` when the
   device has the S extension 13 system update. Tested with AES-256 and RC4-128 files.
 
-### Changed
-- Whole-page bitmaps are capped at 4 MP / 3072 px (was 16 MP / 4096 px); sharpness above that
-  comes from the visible-region detail. A page now takes at most 16 MB instead of 64 MB.
-- A page is rendered only after it stays on screen for 60 ms, so pages flung past are skipped.
-- Measured on a 1080p phone with a 300-page PDF: no crash or out-of-memory while scrolling to the
-  end and zooming to 400%; after 10 s idle the app is back to about 155 MB PSS.
-- Zooming with the buttons, menu or `setScale` centers the content horizontally. Before, a page
-  narrower than the widest page drifted off screen at high zoom (blank view from about 325%).
-- The page shadow and the disabled fade are drawn directly instead of through page-sized layers.
-- Remote PDF and image loading is HTTPS-only by default, with opt-in legacy HTTP, validated
-  redirects, sanitized URL errors and bounded download sizes. Request headers are only sent to
-  the original origin, including after same-origin redirects.
-- The 🔒 badge only shows while an encrypted document is open, and a cancelled password prompt
-  returns to the normal empty state. Exception messages in the empty state are only shown with
-  `logLevel = DEBUG`.
 - Viewer UI (M3): phone layout (top bar with ⋮ menu, bottom bar, floating page indicator, thumbnail
   strip) and tablet layout (web-style toolbar, thumbnail sidebar), switching at 600 dp.
 - Signature and E-Materai pickers (`signatureOptions`, `estampOptions`, `groupByCategory`),
@@ -73,3 +64,26 @@ project uses [Semantic Versioning](https://semver.org/).
 - Maven publication for JitPack (`jitpack.yml`).
 - ktlint, unit test setup.
 - GitHub Actions: lint, unit tests, build, local publish, tag release.
+
+### Changed
+- Compatibility with older apps, checked by a new `compat` CI job that builds a small app against
+  the published SDK: apps now need AGP 8.6+, compileSdk 35+, Kotlin 2.1+ (2.2+ with
+  `psdk-pdfium`) and any JVM target from 1.8. Before, the SDK required AGP 8.9.1, compileSdk 36 and
+  Kotlin 2.3, and apps with JVM target 1.8 or 11 could not call inline functions such as `on<T>`.
+  - kotlin-stdlib dependency pinned to 2.1.0; bytecode compiled for Java 8.
+  - core-ktx 1.16.0 and activity-compose 1.10.1 (were 1.18.0 and 1.13.0); AAR minCompileSdk 35.
+  - kotlinx-coroutines is now an `api` dependency, since `state` and `events` expose its types.
+- Whole-page bitmaps are capped at 4 MP / 3072 px (was 16 MP / 4096 px); sharpness above that
+  comes from the visible-region detail. A page now takes at most 16 MB instead of 64 MB.
+- A page is rendered only after it stays on screen for 60 ms, so pages flung past are skipped.
+- Measured on a 1080p phone with a 300-page PDF: no crash or out-of-memory while scrolling to the
+  end and zooming to 400%; after 10 s idle the app is back to about 155 MB PSS.
+- Zooming with the buttons, menu or `setScale` centers the content horizontally. Before, a page
+  narrower than the widest page drifted off screen at high zoom (blank view from about 325%).
+- The page shadow and the disabled fade are drawn directly instead of through page-sized layers.
+- Remote PDF and image loading is HTTPS-only by default, with opt-in legacy HTTP, validated
+  redirects, sanitized URL errors and bounded download sizes. Request headers are only sent to
+  the original origin, including after same-origin redirects.
+- The 🔒 badge only shows while an encrypted document is open, and a cancelled password prompt
+  returns to the normal empty state. Exception messages in the empty state are only shown with
+  `logLevel = DEBUG`.

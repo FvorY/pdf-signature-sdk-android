@@ -40,6 +40,7 @@ internal fun ViewerRoot(
     modifier: Modifier = Modifier,
 ) {
     val config by viewer.configFlow.collectAsState()
+    SecureScreen(config.secureScreen)
     PsdkTheme(config) {
         val state by viewer.state.collectAsState()
         val picker by viewer.picker.collectAsState()

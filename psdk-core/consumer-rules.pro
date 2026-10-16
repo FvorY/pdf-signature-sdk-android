@@ -1,2 +1,3 @@
 # Rules applied to apps that depend on psdk-core.
-# The SDK uses no reflection, so no keep rules are needed yet.
+# No keep rules are needed. psdk-core looks up the optional Pdfium engine by name; the rules
+# that keep it ship with psdk-pdfium.

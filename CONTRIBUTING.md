@@ -21,15 +21,18 @@ Fix formatting automatically with `./gradlew ktlintFormat`.
 
 ## Dependency versions
 
-All versions live in `gradle/libs.versions.toml`. AndroidX libraries are kept on releases
-that still compile against **API 36**. A library passes its minimum `compileSdk` on to every
-app that uses it, so raising it forces all users to upgrade. Raise it only on purpose and
-note it in `CHANGELOG.md`.
+All versions live in `gradle/libs.versions.toml`. A library passes its dependencies' minimum
+`compileSdk`, Android Gradle Plugin version and Kotlin metadata version on to every app that uses
+it, so raising a dependency can force all users to upgrade. The supported minimums are listed in
+the README and checked by the `compat` CI job (see `compat/README.md`). Before raising a
+dependency, check its AAR metadata and run the compat builds; note any new minimum in
+`CHANGELOG.md`.
 
 ## Public API
 
 The library modules use Kotlin explicit API mode: every public declaration needs an
-explicit `public` modifier and KDoc. API change tracking is added in milestone M1.
+explicit `public` modifier and KDoc. Public API changes are not checked by a tool yet; list them
+in `CHANGELOG.md`.
 
 ## Commits and branches
 
