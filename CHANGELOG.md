@@ -63,6 +63,13 @@ project uses [Semantic Versioning](https://semver.org/).
 - GitHub Actions: lint, unit tests, build, local publish, tag release.
 
 ### Changed
+- Compatibility with older apps, checked by a new `compat` CI job that builds a small app against
+  the published SDK: apps now need AGP 8.6+, compileSdk 35+, Kotlin 2.1+ (2.2+ with
+  `psdk-pdfium`) and any JVM target from 1.8. Before, the SDK required AGP 8.9.1, compileSdk 36 and
+  Kotlin 2.3, and apps with JVM target 1.8 or 11 could not call inline functions such as `on<T>`.
+  - kotlin-stdlib dependency pinned to 2.1.0; bytecode compiled for Java 8.
+  - core-ktx 1.16.0 and activity-compose 1.10.1 (were 1.18.0 and 1.13.0); AAR minCompileSdk 35.
+  - kotlinx-coroutines is now an `api` dependency, since `state` and `events` expose its types.
 - Whole-page bitmaps are capped at 4 MP / 3072 px (was 16 MP / 4096 px); sharpness above that
   comes from the visible-region detail. A page now takes at most 16 MB instead of 64 MB.
 - A page is rendered only after it stays on screen for 60 ms, so pages flung past are skipped.

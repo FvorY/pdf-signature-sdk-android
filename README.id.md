@@ -31,8 +31,20 @@ Dokumentasi: [DOCUMENTATION.id.md](DOCUMENTATION.id.md) · [English documentatio
 
 ## Persyaratan
 
-- minSdk 24 (Android 7.0)
-- Aplikasi pemakai harus compile dengan API 36 atau lebih baru
+| | Minimum | Catatan |
+|---|---|---|
+| Android | minSdk 24 (7.0) | |
+| compileSdk | 35 | |
+| Android Gradle Plugin | 8.6 | Disarankan 8.9.1+. Di 8.6–8.8, tambahkan `lint { disable += "NullSafeMutableLiveData" }`: lint versi itu crash pada check bawaan AndroidX Lifecycle 2.10. |
+| Kotlin | 2.1 | `psdk-pdfium` butuh Kotlin 2.2, karena library Pdfium-nya dibuat dengan Kotlin 2.3. |
+| JVM target | 1.8 | Aplikasi dengan target 1.8, 11, atau 17 semuanya bisa. |
+| UI toolkit | Compose atau XML | Compose ikut sebagai dependensi; aplikasi XML memakai `PdfSignatureView`. |
+
+Kombinasi di atas di-build oleh CI di setiap perubahan (`compat/`).
+
+`psdk-pdfium` menambah sekitar 18 MB library native untuk empat ABI pada APK universal. Rilis dalam
+bentuk Android App Bundle, atau pakai ABI split, supaya tiap perangkat hanya mengunduh miliknya
+(sekitar 4–5 MB).
 
 ## Instalasi
 
