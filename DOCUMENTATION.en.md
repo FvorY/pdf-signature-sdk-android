@@ -8,6 +8,10 @@ backend can complete the signing for web, Android and iOS.
 The iOS SDK's [guide](https://github.com/FvorY/pdf-signature-sdk-ios/blob/main/DOCUMENTATION.en.md)
 has the same sections. Bahasa Indonesia: [DOCUMENTATION.id.md](DOCUMENTATION.id.md).
 
+> **About the code samples.** Everything you see is SDK API except values that stand for your own
+> data: `uri`, `file`, `bytes`, `context` and resource names such as `R.drawable.sig_director`.
+> The code is the same in the English and Indonesian guides; only comments and texts in quotes differ.
+
 1. [Requirements and installation](#1-requirements-and-installation)
 2. [Showing the viewer](#2-showing-the-viewer)
 3. [PDF sources](#3-pdf-sources)
@@ -194,7 +198,9 @@ that measure from the bottom-left corner. `removeSignature(id)` and `clearSignat
 ## 7. Events and state
 
 ```kotlin
-val subscription = viewer.on<PsdkEvent.SignaturePlaced> { event -> send(event.item.toJson()) }
+val subscription = viewer.on<PsdkEvent.SignaturePlaced> { event ->
+    Log.d("psdk", event.item.toJsonString()) // send this to your backend
+}
 viewer.once<PsdkEvent.DocumentLoaded> { println("${it.totalPages} pages") }
 subscription.cancel() // or viewer.off(subscription)
 ```
@@ -236,7 +242,9 @@ either way, so you can show your own dialog instead:
 ```kotlin
 val viewer = rememberPdfSignatureViewer(PsdkConfig(ui = PsdkUiConfig(passwordDialog = false)))
 viewer.on<PsdkEvent.PasswordRequested> { event ->
-    showMyDialog(wrong = event.isIncorrect, onOk = event::updatePassword, onCancel = event::cancel)
+    // Show your own dialog (event.isIncorrect is true after a wrong password), then answer it:
+    event.updatePassword("test123") // the text the user typed
+    // event.cancel()               // or the user gave up
 }
 ```
 
@@ -315,8 +323,11 @@ happens with the chosen file:
 
 ```kotlin
 PsdkConfig(onUpload = { picked ->
-    if (!isAllowed(picked)) UploadDecision.Cancel else UploadDecision.Proceed
-    // or UploadDecision.Replace(otherSource)
+    // Example: only accept files up to 20 MB (`context` is your Context)
+    val uri = (picked as? PdfSource.UriSource)?.uri
+    val size = uri?.let { context.contentResolver.openAssetFileDescriptor(it, "r")?.use { d -> d.length } }
+    if (size != null && size in 0..20_000_000) UploadDecision.Proceed else UploadDecision.Cancel
+    // or open another document instead: UploadDecision.Replace(PdfSource.AssetSource("other.pdf"))
 })
 ```
 

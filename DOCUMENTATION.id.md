@@ -8,6 +8,10 @@ satu backend bisa menyelesaikan tanda tangan untuk web, Android, dan iOS.
 [Panduan SDK iOS](https://github.com/FvorY/pdf-signature-sdk-ios/blob/main/DOCUMENTATION.id.md)
 memakai bagian yang sama. English: [DOCUMENTATION.en.md](DOCUMENTATION.en.md).
 
+> **Tentang contoh kode.** Semua yang tampil adalah API SDK, kecuali nilai yang mewakili datamu
+> sendiri: `uri`, `file`, `bytes`, `context`, dan nama resource seperti `R.drawable.sig_director`. Kodenya sama di panduan Inggris dan Indonesia; hanya komentar dan teks dalam
+> tanda kutip yang berbeda.
+
 1. [Persyaratan dan instalasi](#1-persyaratan-dan-instalasi)
 2. [Menampilkan viewer](#2-menampilkan-viewer)
 3. [Sumber PDF](#3-sumber-pdf)
@@ -140,7 +144,7 @@ hanya dikirim ke origin awal, dan ukurannya dibatasi 100 MiB (PDF) serta 10 MiB 
 val signatureId = viewer.placeSignature(
     PlaceOptions(
         page = 1, x = 72.0, y = 680.0, label = "Direktur",
-        image = PsdkImage.Url("https://example.com/ttd.png"), width = 140.0,
+        image = PsdkImage.Url("https://example.com/signature.png"), width = 140.0,
     )
 )
 val stampId = viewer.placeEStamp(PlaceOptions(page = 1, x = 420.0, y = 700.0))
@@ -180,7 +184,7 @@ Tombol tambah dan picker di UI bawaan dijelaskan di §10.
 
 ```kotlin
 val items: List<SignatureItem> = viewer.getSignatures()
-val diHalaman2 = viewer.getSignaturesByPage(2)
+val onPage2 = viewer.getSignaturesByPage(2)
 val json: String = items.toJsonString()   // sama persis dengan JSON.stringify di web SDK
 val array: JSONArray = items.toJsonArray()
 ```
@@ -196,8 +200,10 @@ yang mengukur dari pojok kiri-bawah. `removeSignature(id)` dan `clearSignatures(
 ## 7. Event dan state
 
 ```kotlin
-val subscription = viewer.on<PsdkEvent.SignaturePlaced> { event -> kirim(event.item.toJson()) }
-viewer.once<PsdkEvent.DocumentLoaded> { println("${it.totalPages} halaman") }
+val subscription = viewer.on<PsdkEvent.SignaturePlaced> { event ->
+    Log.d("psdk", event.item.toJsonString()) // kirim ini ke backend
+}
+viewer.once<PsdkEvent.DocumentLoaded> { println("${it.totalPages} pages") }
 subscription.cancel() // atau viewer.off(subscription)
 ```
 
@@ -238,7 +244,9 @@ sendiri:
 ```kotlin
 val viewer = rememberPdfSignatureViewer(PsdkConfig(ui = PsdkUiConfig(passwordDialog = false)))
 viewer.on<PsdkEvent.PasswordRequested> { event ->
-    tampilkanDialog(salah = event.isIncorrect, onOk = event::updatePassword, onBatal = event::cancel)
+    // Tampilkan dialog sendiri (event.isIncorrect bernilai true setelah password salah), lalu jawab:
+    event.updatePassword("test123") // teks yang diketik user
+    // event.cancel()               // atau user menyerah
 }
 ```
 
@@ -283,7 +291,7 @@ atau menampilkan daftar bila opsi diisi:
 ```kotlin
 PsdkConfig(
     signatureOptions = listOf(
-        PickerOption("direktur", "Direktur", PsdkImage.Resource(R.drawable.ttd_direktur), group = "Internal"),
+        PickerOption("direktur", "Direktur", PsdkImage.Resource(R.drawable.sig_director), group = "Internal"),
         PickerOption("klien", "Klien", group = "Eksternal"),
     ),
     estampOptions = listOf(PickerOption("materai-10000", "Materai 10.000")),
@@ -317,9 +325,12 @@ Tombol upload (`topbar.upload`) membuka file picker sistem untuk PDF. `onUpload`
 terjadi dengan file pilihan:
 
 ```kotlin
-PsdkConfig(onUpload = { dipilih ->
-    if (!diizinkan(dipilih)) UploadDecision.Cancel else UploadDecision.Proceed
-    // atau UploadDecision.Replace(sumberLain)
+PsdkConfig(onUpload = { picked ->
+    // Contoh: hanya terima file sampai 20 MB (`context` adalah Context milikmu)
+    val uri = (picked as? PdfSource.UriSource)?.uri
+    val size = uri?.let { context.contentResolver.openAssetFileDescriptor(it, "r")?.use { d -> d.length } }
+    if (size != null && size in 0..20_000_000) UploadDecision.Proceed else UploadDecision.Cancel
+    // atau buka dokumen lain: UploadDecision.Replace(PdfSource.AssetSource("other.pdf"))
 })
 ```
 
@@ -336,8 +347,8 @@ viewer.showSkeleton(false)
 ## 14. Gambar halaman
 
 ```kotlin
-val halaman: Bitmap = viewer.renderPage(page = 1, scale = 2f)               // piksel per PDF point
-val denganItem: Bitmap = viewer.renderPageWithOverlay(page = 1, scale = 2f) // item digambar di atasnya
+val page: Bitmap = viewer.renderPage(page = 1, scale = 2f)                // piksel per PDF point
+val withItems: Bitmap = viewer.renderPageWithOverlay(page = 1, scale = 2f) // item digambar di atasnya
 ```
 
 Berguna untuk pratinjau atau layar konfirmasi. Gambar mengikuti /Rotate seperti viewer.
