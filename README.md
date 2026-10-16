@@ -2,36 +2,44 @@
 
 [![CI](https://github.com/FvorY/pdf-signature-sdk-android/actions/workflows/ci.yml/badge.svg)](https://github.com/FvorY/pdf-signature-sdk-android/actions/workflows/ci.yml)
 [![JitPack](https://jitpack.io/v/FvorY/pdf-signature-sdk-android.svg)](https://jitpack.io/#FvorY/pdf-signature-sdk-android)
-![minSdk 24](https://img.shields.io/badge/minSdk-24-blue)
+![Android API 24+](https://img.shields.io/badge/Android-API%2024%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-Native Android (Kotlin) PDF viewer that lets users place, drag, resize and remove
-**signature** and **E-Materai** boxes on a document. Positions are returned in
-**PDF points**, exactly like the web SDK
-[`pdf-signature-esign-sdk`](https://www.npmjs.com/package/pdf-signature-esign-sdk) v1.1.2,
-so the same backend can complete the signing.
+Native Android PDF viewer for placing **signatures** and **E-Materai** on a document. Users can
+add, drag, resize, lock, and remove items. The SDK returns positions in PDF points, so the same
+payload can be sent to the backend used by the web and iOS SDKs.
 
-> 🚧 **Preview.** The viewer API and sample are usable and the public API is under stabilization;
-> it is not yet a 1.0.0 release.
+The Android and iOS SDKs expose the same core concepts: PDF source, item placement, events,
+coordinates, JSON/Codable output, and backend signing. Only the UI integration is platform-specific.
 
-Bahasa Indonesia: [README.id.md](README.id.md)
+> Preview: the viewer and sample are usable, but the public API may still change before 1.0.0.
 
-Documentation: [DOCUMENTATION.en.md](DOCUMENTATION.en.md) · [Dokumentasi Bahasa Indonesia](DOCUMENTATION.id.md)
+Languages and full API documentation:
 
-## Features
+- [Bahasa Indonesia](README.id.md)
+- [English documentation](DOCUMENTATION.en.md)
+- [Dokumentasi Bahasa Indonesia](DOCUMENTATION.id.md)
 
-- PDF rendering with the platform `PdfRenderer`: lazy pages, pinch-zoom, pagination, thumbnails
-- Signature and E-Materai placement with drag, resize, delete and per-item locks
-- Web-parity methods, events, JSON output, picker options and skeleton overlay
-- Jetpack Compose API plus a classic `View` for XML layouts
-- Light, dark and system themes; every UI string can be replaced
-- Optional `psdk-pdfium` module that opens password-protected PDFs on Android 14 and lower
-- Only AndroidX and kotlinx-coroutines as dependencies
+## What it provides
+
+- PDF rendering with `PdfRenderer`, pagination, thumbnails, pinch-zoom, and fit-to-width.
+- Signature and E-Materai placement with drag, resize, delete, and per-item locks.
+- Kotlin API, events, `StateFlow`, and JSON output compatible with the web SDK.
+- Jetpack Compose and classic XML/View integration.
+- Light, dark, and system themes, custom labels, picker options, skeleton loading, and `FLAG_SECURE`.
+- Optional `psdk-pdfium` module for password-protected PDFs on Android 14 and lower.
 
 ## Requirements
 
-- minSdk 24 (Android 7.0)
-- Apps must compile against API 36 or newer
+| Component | Requirement |
+|---|---|
+| Android | minSdk 24 / Android 7.0+ |
+| compileSdk | 35+ |
+| Kotlin | 2.1+; `psdk-pdfium` requires Kotlin 2.2+ |
+| UI | Jetpack Compose or XML/View |
+
+`psdk-pdfium` adds about 18 MB of native libraries to a universal APK. Prefer an Android App
+Bundle or ABI splits for production builds.
 
 ## Installation
 
@@ -47,49 +55,138 @@ dependencyResolutionManagement {
 }
 ```
 
-Then in your module's `build.gradle.kts`:
+Add the core SDK to the application module:
 
 ```kotlin
 dependencies {
     implementation("com.github.FvorY.pdf-signature-sdk-android:psdk-core:<version>")
-    // Optional: password-protected PDFs on Android 14 and lower
-    implementation("com.github.FvorY.pdf-signature-sdk-android:psdk-pdfium:<version>")
 }
 ```
 
-## Usage
+For password-protected PDFs on Android 14 and lower, also add:
 
 ```kotlin
-val viewer = rememberPdfSignatureViewer(PsdkConfig(file = PdfSource.UriSource(uri)))
-
-PdfSignatureViewer(viewer, Modifier.fillMaxSize())
-
-// Later, send the positions to your backend:
-val json = viewer.getSignatures().toJsonArray()
+implementation("com.github.FvorY.pdf-signature-sdk-android:psdk-pdfium:<version>")
 ```
 
-Coordinates use the top-left corner of the page as origin, in PDF points
-(1/72 inch), and `x, y` is the top-left corner of the item, the same as the web SDK.
+Replace `<version>` with the tag or commit you want to use. There is currently no stable 1.0.0
+release; JitPack can build a commit hash while the API is in preview.
 
-### Remote source security
+## Quick start: Jetpack Compose
 
-Remote PDF and image URLs require HTTPS by default. For a trusted legacy HTTP endpoint only,
-opt in explicitly with `PsdkConfig(allowInsecureHttp = true)`. Downloads follow at most five
-validated redirects and are limited to 100 MiB for PDFs and 10 MiB for images. The host app must
-declare the `INTERNET` permission when using remote sources.
+```kotlin
+@Composable
+fun SignScreen(uri: Uri) {
+    val viewer = rememberPdfSignatureViewer(
+        PsdkConfig(file = PdfSource.UriSource(uri))
+    )
 
-## Project layout
+    PdfSignatureViewer(
+        viewer = viewer,
+        modifier = Modifier.fillMaxSize(),
+    )
+}
+```
 
-| Module | Contents |
+`rememberPdfSignatureViewer` keeps the viewer in a `ViewModel` during configuration changes. To
+load a document later, create it without `file` and call `viewer.loadDocument(...)`.
+
+## Quick start: XML/View
+
+```xml
+<io.github.fvory.psdk.PdfSignatureView
+    android:id="@+id/pdfSignatureView"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" />
+```
+
+```kotlin
+val pdfView = findViewById<PdfSignatureView>(R.id.pdfSignatureView)
+pdfView.setConfig(PsdkConfig(file = PdfSource.UriSource(uri)))
+val viewer = pdfView.viewer
+```
+
+The host must be a `ComponentActivity` or subclass such as `AppCompatActivity`. With XML, a
+rotation creates a new viewer; save `getSignatures()` yourself if positions must be restored.
+
+## PDF sources
+
+```kotlin
+PdfSource.FileSource(file)
+PdfSource.UriSource(uri)
+PdfSource.UrlSource("https://example.com/document.pdf")
+PdfSource.BytesSource(pdfBytes)
+PdfSource.AssetSource("documents/example.pdf")
+```
+
+`UrlSource` also accepts request headers. Remote PDF and image URLs require HTTPS by default. The
+host app must declare `android.permission.INTERNET` for remote sources. HTTP can be enabled only
+explicitly for a trusted legacy endpoint with `PsdkConfig(allowInsecureHttp = true)`.
+
+Downloads are limited to 100 MiB for PDFs and 10 MiB for images; redirects are validated up to five
+times.
+
+## Place items and export the result
+
+```kotlin
+val id = viewer.placeSignature(
+    PlaceOptions(
+        page = 1,
+        x = 72.0,
+        y = 680.0,
+        label = "Director",
+        width = 140.0,
+        height = 60.0,
+    )
+)
+
+viewer.placeEStamp(PlaceOptions(page = 1, x = 420.0, y = 700.0))
+
+val items = viewer.getSignatures()
+val json = items.toJsonString()
+viewer.removeSignature(id)
+```
+
+Coordinates use PDF points (1/72 inch), with the page's top-left corner as `(0, 0)` and Y
+increasing downward. `page` starts at 1. A4 is commonly 595 × 842 points. The item model also
+provides `toMap()`, `toJson()`, and `yFromBottom(pageHeight)` for PDF libraries using a bottom-left
+origin.
+
+## Events and state
+
+```kotlin
+val subscription = viewer.on<PsdkEvent.SignaturePlaced> { event ->
+    sendToBackend(event.item.toJson())
+}
+
+subscription.cancel()
+```
+
+Available events include `DocumentLoaded`, `PageChanged`, `SignaturePlaced`, `EStampPlaced`,
+`SignatureMoved`, `SignatureRemoved`, `SignaturesCleared`, and `PasswordRequested`. Compose and
+coroutine users can collect `viewer.state` and `viewer.events`.
+
+## Configuration and security
+
+`PsdkConfig` controls theme, labels, picker options, initial zoom, item locks, password UI,
+custom colors, and `secureScreen`. Set `secureScreen = true` to apply `FLAG_SECURE` while the
+viewer is shown, preventing screenshots, screen recording, and recent-app previews.
+
+The SDK only returns placement data. Cryptographic signing, identity verification, authorization,
+and final document integrity checks must be handled by the backend.
+
+## Project layout and tests
+
+| Path | Contents |
 |---|---|
-| `psdk-core` | The library |
-| `psdk-pdfium` | Optional Pdfium rendering engine |
-| `sample` | Demo app |
-| `parity/` | Fixtures that compare output with the web SDK |
+| `psdk-core` | Core Android library |
+| `psdk-pdfium` | Optional Pdfium engine |
+| `sample` | Demo application |
+| `parity/` | Fixtures shared with web SDK comparisons |
 
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+```bash
+./gradlew ktlintCheck :psdk-core:testDebugUnitTest :sample:assembleDebug
+```
 
 ## License
 
