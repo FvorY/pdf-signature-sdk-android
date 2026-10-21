@@ -1,5 +1,15 @@
 # PdfSignatureSDK for Android
 
+## Demo TTD Cepat 1.0
+
+Try the [TTD Cepat demo release](https://github.com/FvorY/pdf-signature-sdk-ios/releases/tag/demo-ttd-cepat-1.0): draw a signature, open a PDF, place signatures, stamps or E-Materai, and share the resulting PDF. This is a preview demo, not a stable SDK 1.0 release.
+
+- **Android:** download `TTD-Cepat-Android.apk` from the demo release Assets. It is a debug build. Android SDK source is in this repository.
+- **iOS:** download `TTD-Cepat-iOS-unsigned.ipa` from the same release and follow its signing and installation instructions. Swift source is in [pdf-signature-sdk-ios](https://github.com/FvorY/pdf-signature-sdk-ios).
+
+The demo binaries are hosted together in the iOS repository release. GitHub automatically generates `Source code (zip)` and `Source code (tar.gz)` from that repository tag, so those archives contain only iOS source. Android source is available here. The automatic archives cannot be removed individually from release Assets.
+
+
 [![CI](https://github.com/FvorY/pdf-signature-sdk-android/actions/workflows/ci.yml/badge.svg)](https://github.com/FvorY/pdf-signature-sdk-android/actions/workflows/ci.yml)
 [![JitPack](https://jitpack.io/v/FvorY/pdf-signature-sdk-android.svg)](https://jitpack.io/#FvorY/pdf-signature-sdk-android)
 ![Android API 24+](https://img.shields.io/badge/Android-API%2024%2B-blue)
