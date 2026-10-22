@@ -9,14 +9,18 @@ public data class InitSignDocument(
     public val documentSha256: String,
     public val signatureData: List<Map<String, Any?>>,
 ) {
-    public fun toJson(): JSONObject = JSONObject().apply {
-        put("base64Pdf", base64Pdf)
-        put("signatureData", JSONArray().apply {
-            signatureData.forEach { row ->
-                put(JSONObject().apply { row.forEach { (key, value) -> put(key, value ?: JSONObject.NULL) } })
-            }
-        })
-    }
+    public fun toJson(): JSONObject =
+        JSONObject().apply {
+            put("base64Pdf", base64Pdf)
+            put(
+                "signatureData",
+                JSONArray().apply {
+                    signatureData.forEach { row ->
+                        put(JSONObject().apply { row.forEach { (key, value) -> put(key, value ?: JSONObject.NULL) } })
+                    }
+                },
+            )
+        }
 }
 
 /** Converts SDK top-left page points to the same bottom-left PDF points as Flutter resizePdfView. */
@@ -27,12 +31,16 @@ public fun SignatureItem.toInitSignData(
 ): Map<String, Any?> {
     require(specimenId.isNotBlank()) { "Missing backend specimenId for $id" }
     require(page >= 1) { "Invalid page for $id" }
-    require(listOf(sdkPageSize.width, sdkPageSize.height, pdfPageSize.width, pdfPageSize.height)
-        .all { it.isFinite() && it > 0 }) { "Invalid page dimensions" }
+    require(
+        listOf(sdkPageSize.width, sdkPageSize.height, pdfPageSize.width, pdfPageSize.height)
+            .all { it.isFinite() && it > 0 },
+    ) { "Invalid page dimensions" }
     // Android PdfRenderer rounds page dimensions to integer points. Only this sub-point
     // discrepancy may be normalized; a different document/page size must never be silently scaled.
-    require(kotlin.math.abs(sdkPageSize.width - pdfPageSize.width) < 1 &&
-        kotlin.math.abs(sdkPageSize.height - pdfPageSize.height) < 1) { "SDK and payload page dimensions differ" }
+    require(
+        kotlin.math.abs(sdkPageSize.width - pdfPageSize.width) < 1 &&
+            kotlin.math.abs(sdkPageSize.height - pdfPageSize.height) < 1,
+    ) { "SDK and payload page dimensions differ" }
     require(listOf(x, y, width, height).all { it.isFinite() } && width > 0 && height > 0) {
         "Invalid signature rectangle: $id"
     }

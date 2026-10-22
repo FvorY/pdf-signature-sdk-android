@@ -1,11 +1,18 @@
 package io.github.fvory.psdk.model
 
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class InitSignDocumentTest {
-    private fun item(x: Double = 12.0, y: Double = 20.0, width: Double = 80.0, height: Double = 40.0) =
-        SignatureItem("sdk-1", ItemType.SIGNATURE, x, y, 1, "Direktur", width, height)
+    private fun item(
+        x: Double = 12.0,
+        y: Double = 20.0,
+        width: Double = 80.0,
+        height: Double = 40.0,
+    ) = SignatureItem("sdk-1", ItemType.SIGNATURE, x, y, 1, "Direktur", width, height)
 
     @Test fun matchesFlutterPreviewConversionAtDifferentPreviewSizes() {
         val page = PageSize(198.0, 255.12)
@@ -18,7 +25,8 @@ class InitSignDocumentTest {
             val mobileHeight = i.height * previewHeight / page.height
             // Original Flutter previewSpecimenToPage, including its center-origin preview.
             val flutterX = (previewWidth / 2 + mobileX) * page.width / previewWidth - mobileWidth * page.width / previewWidth / 2
-            val flutterY = page.height - (previewHeight / 2 + mobileY) * page.height / previewHeight - mobileHeight * page.height / previewHeight / 2
+            val flutterY =
+                page.height - (previewHeight / 2 + mobileY) * page.height / previewHeight - mobileHeight * page.height / previewHeight / 2
             val row = i.toInitSignData(page, page, "QR_test")
             assertEquals(flutterX, row["x"] as Double, 1e-9)
             assertEquals(flutterY, row["y"] as Double, 1e-9)
@@ -57,8 +65,10 @@ class InitSignDocumentTest {
     }
 
     @Test fun convertsSdkEstampToFlutterEmeteraiType() {
-        val row = item().copy(type = ItemType.ESTAMP)
-            .toInitSignData(PageSize(198.0, 255.12), PageSize(198.0, 255.12), "materai-id")
+        val row =
+            item()
+                .copy(type = ItemType.ESTAMP)
+                .toInitSignData(PageSize(198.0, 255.12), PageSize(198.0, 255.12), "materai-id")
         assertEquals("emeterai", row["specimenType"])
     }
 
