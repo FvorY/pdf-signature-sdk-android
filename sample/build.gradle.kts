@@ -9,11 +9,19 @@ android {
 
     defaultConfig {
         applicationId = "io.github.fvory.psdk.coordinates"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
-        versionName = "coordinate-demo-2"
+        versionCode = 4
+        versionName = "coordinate-demo-4"
     }
+
+    sourceSets.getByName("androidTest").assets.srcDir(
+        layout.buildDirectory
+            .dir("testPdfFixtures")
+            .get()
+            .asFile,
+    )
 
     buildFeatures {
         compose = true
@@ -35,6 +43,8 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.androidx.activity.compose)
     debugImplementation(libs.compose.ui.tooling)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.junit)
     testImplementation(libs.org.json)
 }

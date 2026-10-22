@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -50,6 +51,7 @@ import androidx.compose.runtime.toMutableStateMap
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.fvory.psdk.PdfSignatureViewer
@@ -90,7 +92,7 @@ private fun CoordinateDemo() {
                                 upload = false,
                                 signature = false,
                                 eStamp = false,
-                                brandText = "Tes koordinat ezSign v2",
+                                brandText = "Tes koordinat ezSign v4",
                             ),
                     ),
             ),
@@ -101,6 +103,7 @@ private fun CoordinateDemo() {
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("Pilih PDF, isi specimenId, lalu tambah dan geser TTD.") }
     var name by rememberSaveable { mutableStateOf("document.pdf") }
+    var sourceHash by rememberSaveable { mutableStateOf("") }
     var sizes by rememberSaveable(
         stateSaver =
             listSaver<List<PageSize>, Double>(
@@ -109,6 +112,8 @@ private fun CoordinateDemo() {
             ),
     ) { mutableStateOf(emptyList()) }
     var specimenId by rememberSaveable { mutableStateOf("") }
+    var startX by rememberSaveable { mutableStateOf("") }
+    var startY by rememberSaveable { mutableStateOf("") }
     var reason by rememberSaveable { mutableStateOf("I approve this Document") }
     var location by rememberSaveable { mutableStateOf("Surabaya") }
     var otp by remember { mutableStateOf("") }
@@ -155,6 +160,7 @@ private fun CoordinateDemo() {
                 scope.launch {
                     busy = true
                     sizes = emptyList()
+                    sourceHash = ""
                     bindings.clear()
                     try {
                         val source =
@@ -163,6 +169,13 @@ private fun CoordinateDemo() {
                                 Triple(bytes, CoordinatePdfMetadata.read(bytes), displayName(context, uri))
                             }
                         viewer.loadDocument(PdfSource.BytesSource(source.first))
+                        sourceHash =
+                            withContext(Dispatchers.IO) {
+                                java.security.MessageDigest
+                                    .getInstance("SHA-256")
+                                    .digest(source.first)
+                                    .joinToString("") { "%02x".format(it) }
+                            }
                         sizes = source.second
                         name = source.third
                         status = "$name: ${sizes.size} halaman. Isi specimenId backend sebelum menambah TTD."
@@ -193,6 +206,30 @@ private fun CoordinateDemo() {
                         busy = false
                     }
                 }
+            }
+        }
+    val bundleFile = remember { java.io.File(context.cacheDir, "coordinate-test.zip") }
+    val saveBundle =
+        rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+            if (uri != null && bundleFile.isFile) {
+                scope.launch {
+                    busy = true
+                    try {
+                        withContext(Dispatchers.IO) {
+                            checkNotNull(context.contentResolver.openOutputStream(uri)).use { output ->
+                                bundleFile.inputStream().use { it.copyTo(output) }
+                            }
+                            bundleFile.delete()
+                        }
+                        status = "Paket uji tersimpan: source.pdf, request.json, audit.json, dan koleksi Postman."
+                    } catch (e: Exception) {
+                        status = "Paket gagal disimpan: ${e.message}"
+                    } finally {
+                        busy = false
+                    }
+                }
+            } else if (uri == null) {
+                bundleFile.delete()
             }
         }
     val checkJson =
@@ -242,6 +279,9 @@ private fun CoordinateDemo() {
                     OutlinedButton(onClick = { openResult.launch(arrayOf("application/pdf")) }, enabled = !busy) { Text("Buka PDF hasil") }
                 }
                 Text(status, fontSize = 12.sp)
+                if (sourceHash.isNotEmpty()) {
+                    SelectionContainer { Text("PDF: $name\nSHA-256: $sourceHash", fontSize = 10.sp, fontFamily = FontFamily.Monospace) }
+                }
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 OutlinedTextField(
                     value = specimenId,
@@ -259,15 +299,47 @@ private fun CoordinateDemo() {
                     },
                     fontSize = 11.sp,
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = startX,
+                        onValueChange = { startX = it },
+                        label = { Text("X awal (kiri atas, pt)") },
+                        singleLine = true,
+                        enabled = !busy,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f),
+                    )
+                    OutlinedTextField(
+                        value = startY,
+                        onValueChange = { startY = it },
+                        label = { Text("Y awal (kiri atas, pt)") },
+                        singleLine = true,
+                        enabled = !busy,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Text(
+                    "Kosongkan X dan Y untuk menaruh TTD di tengah halaman. Isi keduanya agar TTD langsung muncul di posisi itu tanpa digeser.",
+                    fontSize = 11.sp,
+                )
                 Button(enabled = !busy && sizes.isNotEmpty() && specimenId.isNotBlank(), onClick = {
                     try {
                         val size = viewer.getPageSize(viewer.currentPage)
                         val width = minOf(160.0, size.width * 0.35)
+                        val height = if (image == null) width * 0.3 else null
+                        val x = startX.trim().replace(',', '.').toDoubleOrNull()
+                        val y = startY.trim().replace(',', '.').toDoubleOrNull()
+                        require(
+                            (startX.isBlank() && startY.isBlank()) || (x != null && y != null),
+                        ) { "X dan Y harus diisi angka berdua, atau kosongkan keduanya" }
                         val id =
                             viewer.placeSignature(
                                 PlaceOptions(
+                                    x = x?.coerceIn(0.0, maxOf(0.0, size.width - width)),
+                                    y = y?.coerceIn(0.0, maxOf(0.0, size.height - (height ?: 48.0))),
                                     width = width,
-                                    height = if (image == null) width * 0.3 else null,
+                                    height = height,
                                     image = image ?: PsdkImage.BitmapImage(SampleImages.signature),
                                     label = specimenId.trim(),
                                 ),
@@ -304,12 +376,63 @@ private fun CoordinateDemo() {
                     "POST https://gtm.myesign.id/api/signing/initsign\nPostman: Authorization Bearer token; Body raw JSON.",
                     fontSize = 11.sp,
                 )
+                Button(enabled = !busy && sizes.isNotEmpty() && state.signatures.isNotEmpty(), onClick = {
+                    scope.launch {
+                        busy = true
+                        try {
+                            val rawItems = viewer.getSignatures()
+                            val sdkSizes = rawItems.map { viewer.getPageSize(it.page) }
+                            val capturedSizes = sizes
+                            val doc = viewer.exportInitSignDocument(bindings.toMap(), capturedSizes)
+                            check(doc.documentSha256 == sourceHash) { "PDF viewer berbeda dari PDF yang dipilih; buka ulang PDF" }
+                            val payload = CoordinatePayload.build(doc, name, reason, location, otp)
+                            val audit =
+                                org.json
+                                    .JSONObject()
+                                    .put("sourceName", name)
+                                    .put("sdkItems", org.json.JSONArray(rawItems.map { it.toJson() }))
+                                    .put(
+                                        "sdkPageSizes",
+                                        org.json.JSONArray(
+                                            sdkSizes.map {
+                                                org.json
+                                                    .JSONObject()
+                                                    .put("width", it.width)
+                                                    .put("height", it.height)
+                                            },
+                                        ),
+                                    ).put(
+                                        "pdfPageSizes",
+                                        org.json.JSONArray(
+                                            capturedSizes.map {
+                                                org.json
+                                                    .JSONObject()
+                                                    .put("width", it.width)
+                                                    .put("height", it.height)
+                                            },
+                                        ),
+                                    )
+                            withContext(Dispatchers.IO) {
+                                val bytes = android.util.Base64.decode(doc.base64Pdf, android.util.Base64.DEFAULT)
+                                CoordinatePayloadValidator.validate(payload, CoordinatePdfMetadata.read(bytes))
+                                bundleFile.outputStream().use { CoordinateTestBundle.write(it, bytes, payload, audit) }
+                            }
+                            status = "Snapshot PDF dan koordinat sama. SHA-256: ${doc.documentSha256}"
+                            saveBundle.launch("coordinate-test-${System.currentTimeMillis()}.zip")
+                        } catch (e: Exception) {
+                            status = "Paket uji ditolak: ${e.message}"
+                        } finally {
+                            busy = false
+                        }
+                    }
+                }) { Text("Ekspor paket uji ZIP + Postman") }
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(enabled = !busy && sizes.isNotEmpty() && state.signatures.isNotEmpty(), onClick = {
                         scope.launch {
                             busy = true
                             try {
                                 val doc = viewer.exportInitSignDocument(bindings.toMap(), sizes)
+                                check(doc.documentSha256 == sourceHash) { "PDF viewer berbeda dari PDF yang dipilih; buka ulang PDF" }
                                 val body = CoordinatePayload.build(doc, name, reason, location, otp)
                                 withContext(Dispatchers.IO) {
                                     val bytes = android.util.Base64.decode(doc.base64Pdf, android.util.Base64.DEFAULT)
