@@ -167,6 +167,23 @@ Without `height`, an item with an image takes the image's aspect ratio once the 
 
 The add buttons and pickers of the built-in UI are described in §10.
 
+### Starting position from the add buttons
+
+By default the add buttons and pickers (and `openSignatureModal()` / `openEStampModal()`) put a new
+item in the center of the page, and the user drags it. Set `defaultPosition` to place it at a fixed
+position instead, with no dragging needed:
+
+```kotlin
+PsdkConfig(defaultPosition = PlacementPosition(x = 10.0, y = 20.0)) // top-left corner, PDF points
+// or later: viewer.updateConfig { it.copy(defaultPosition = PlacementPosition(10.0, 20.0)) }
+```
+
+- `x`, `y` use the same coordinates as `PlaceOptions` (top-left origin, Y down, PDF points).
+- The item is kept inside the page: a position beyond the page edge is pulled back so the whole item fits.
+- It applies to the current page, to signatures and E-Materai, and to items chosen from a picker.
+- `null` (default) keeps the centered placement.
+- `placeSignature` / `placeEStamp` are not affected: their own `x`, `y` always win.
+
 ## 5. Editing on screen
 
 - Drag an item to move it; drag the handle on its bottom-right corner to resize it (at least
@@ -392,6 +409,7 @@ also shows the exception, and the SDK logs details to Logcat.
 | `disabled`, `disableDragging`, `disableDrag`, `disableResize` | `false` | §5 |
 | `estampKeepAspectRatio` | `false` | §5 |
 | `signatureOptions`, `estampOptions`, `groupByCategory` | empty, `false` | §10 |
+| `defaultPosition` | `null` (centered) | §4 |
 | `onUpload` | `null` (open the picked file) | §12 |
 | `lockScrollWhenPaginationLocked` | `false` | §8 |
 | `secureScreen` | `false` | §15 |

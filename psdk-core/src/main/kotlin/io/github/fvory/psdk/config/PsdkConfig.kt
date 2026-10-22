@@ -66,6 +66,19 @@ public data class PsdkConfig(
     public val labels: PsdkLabels = PsdkLabels(),
     public val ui: PsdkUiConfig = PsdkUiConfig(),
     public val logLevel: PsdkLogLevel = PsdkLogLevel.ERROR,
+    /**
+     * Where the "Add Signature" / E-Materai buttons and pickers place a new item, so the user does not
+     * have to drag it. `null` (default) centers it on the page. Origin is the top-left corner of the
+     * page in PDF points, the same as [io.github.fvory.psdk.model.PlaceOptions.x]. The item is kept
+     * inside the page. `placeSignature` / `placeEStamp` are not affected: they use their own options.
+     */
+    public val defaultPosition: PlacementPosition? = null,
+)
+
+/** Top-left position of an item on its page, in PDF points (origin top-left, y grows downward). */
+public data class PlacementPosition(
+    public val x: Double,
+    public val y: Double,
 )
 
 public enum class PsdkLogLevel {

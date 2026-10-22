@@ -168,6 +168,23 @@ halaman.
 
 Tombol tambah dan picker di UI bawaan dijelaskan di §10.
 
+### Posisi awal dari tombol tambah
+
+Secara default tombol tambah dan picker (serta `openSignatureModal()` / `openEStampModal()`) menaruh
+item baru di tengah halaman, lalu pengguna menggesernya. Isi `defaultPosition` agar item langsung
+muncul di posisi tetap tanpa digeser:
+
+```kotlin
+PsdkConfig(defaultPosition = PlacementPosition(x = 10.0, y = 20.0)) // pojok kiri atas, PDF point
+// atau nanti: viewer.updateConfig { it.copy(defaultPosition = PlacementPosition(10.0, 20.0)) }
+```
+
+- `x`, `y` memakai koordinat yang sama dengan `PlaceOptions` (titik asal kiri atas, Y ke bawah, PDF point).
+- Item dijaga tetap di dalam halaman: posisi di luar tepi halaman ditarik masuk agar seluruh item muat.
+- Berlaku untuk halaman aktif, TTD dan E-Materai, serta item yang dipilih dari picker.
+- `null` (default) tetap menaruh item di tengah.
+- `placeSignature` / `placeEStamp` tidak terpengaruh: `x`, `y` miliknya selalu dipakai.
+
 ## 5. Mengedit di layar
 
 - Geser item untuk memindahkan; tarik pegangan di pojok kanan-bawah untuk resize (minimal 20 pt);
@@ -395,6 +412,7 @@ juga menampilkan exception-nya, dan SDK menulis detail ke Logcat.
 | `disabled`, `disableDragging`, `disableDrag`, `disableResize` | `false` | §5 |
 | `estampKeepAspectRatio` | `false` | §5 |
 | `signatureOptions`, `estampOptions`, `groupByCategory` | kosong, `false` | §10 |
+| `defaultPosition` | `null` (tengah) | §4 |
 | `onUpload` | `null` (buka file pilihan) | §12 |
 | `lockScrollWhenPaginationLocked` | `false` | §8 |
 | `secureScreen` | `false` | §15 |

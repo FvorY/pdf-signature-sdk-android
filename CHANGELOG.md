@@ -7,6 +7,9 @@ project uses [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `PsdkConfig.defaultPosition` (`PlacementPosition(x, y)`): the add buttons and pickers place new items
+  at a fixed top-left position (kept inside the page) instead of the page center, so no dragging is needed.
+  `placeSignature` / `placeEStamp` are unchanged.
 - `viewer.once<PsdkEvent.X> { }` shortcut, like `on<T>`.
 - Guides (EN/ID) rewritten with the same 20 sections as the iOS guides: built-in UI, themes,
   upload, skeleton, page images, errors, all options and platform differences.

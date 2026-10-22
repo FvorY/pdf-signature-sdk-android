@@ -32,12 +32,12 @@ import io.github.fvory.psdk.event.PsdkEvent
 import io.github.fvory.psdk.event.PsdkListener
 import io.github.fvory.psdk.event.PsdkSubscription
 import io.github.fvory.psdk.model.ItemType
-import io.github.fvory.psdk.model.toInitSignData
 import io.github.fvory.psdk.model.PageSize
 import io.github.fvory.psdk.model.PdfSource
 import io.github.fvory.psdk.model.PlaceOptions
 import io.github.fvory.psdk.model.PsdkImage
 import io.github.fvory.psdk.model.SignatureItem
+import io.github.fvory.psdk.model.toInitSignData
 import io.github.fvory.psdk.state.ViewerSnapshot
 import io.github.fvory.psdk.ui.StaticOverlayPainter
 import io.github.fvory.psdk.util.Logger
@@ -328,29 +328,36 @@ public class PdfSignatureViewer internal constructor(
         require(signatures.isNotEmpty()) { "No signatures to export" }
         val sizes = mutableState.value.pageSizes
         require(exactPageSizes.size == sizes.size) { "Page count differs" }
-        val rows = signatures.map { item ->
-            require(item.page in 1..sizes.size) { "Invalid signature page" }
-            item.toInitSignData(
-                sizes[item.page - 1],
-                exactPageSizes[item.page - 1],
-                specimenIds[item.id].orEmpty(),
-            )
-        }
-        val (hash, base64) = withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val bytes = file.readBytes()
-            signingHash(bytes) to android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
-        }
+        val rows =
+            signatures.map { item ->
+                require(item.page in 1..sizes.size) { "Invalid signature page" }
+                item.toInitSignData(
+                    sizes[item.page - 1],
+                    exactPageSizes[item.page - 1],
+                    specimenIds[item.id].orEmpty(),
+                )
+            }
+        val (hash, base64) =
+            withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val bytes = file.readBytes()
+                signingHash(bytes) to android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+            }
         check(token == loadToken && isLoaded && !isDestroyed && !mutableState.value.isLoading) {
             "Document changed while exporting"
         }
         check(hash == expectedHash) { "Loaded PDF bytes changed; reload before signing" }
         return io.github.fvory.psdk.model.InitSignDocument(
-            base64, expectedHash, rows,
+            base64,
+            expectedHash,
+            rows,
         )
     }
 
     private fun signingHash(bytes: ByteArray): String =
-        java.security.MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+        java.security.MessageDigest
+            .getInstance("SHA-256")
+            .digest(bytes)
+            .joinToString("") { "%02x".format(it) }
 
     /** Size of [page] in PDF points, after its `/Rotate`. */
     public fun getPageSize(page: Int): PageSize {
@@ -654,7 +661,7 @@ public class PdfSignatureViewer internal constructor(
     ) {
         closePicker()
         if (isDestroyed || !isLoaded) return
-        place(type, PlaceOptions(label = option.label, image = option.image))
+        place(type, positioned(type, PlaceOptions(label = option.label, image = option.image)))
     }
 
     /** Upload button flow (B-UPL-02/03): ask `onUpload`, then open the file. Errors are only logged. */
@@ -760,10 +767,27 @@ public class PdfSignatureViewer internal constructor(
         if (isDestroyed || !isLoaded) return
         val options = if (type == ItemType.SIGNATURE) config.signatureOptions else config.estampOptions
         if (options.isEmpty()) {
-            place(type, PlaceOptions())
+            place(type, positioned(type, PlaceOptions()))
         } else {
             picker.value = type
         }
+    }
+
+    /** Applies [PsdkConfig.defaultPosition] to a placement started from the UI, clamped inside the page. */
+    private fun positioned(
+        type: ItemType,
+        options: PlaceOptions,
+    ): PlaceOptions {
+        val position = config.defaultPosition ?: return options
+        val sizes = mutableState.value.pageSizes
+        val size = sizes.getOrNull((options.page ?: currentPage) - 1) ?: return options
+        val estamp = type == ItemType.ESTAMP
+        val width = options.width ?: if (estamp) ItemStore.ESTAMP_SIZE else ItemStore.SIGNATURE_WIDTH
+        val height = options.height ?: if (estamp) ItemStore.ESTAMP_SIZE else ItemStore.SIGNATURE_HEIGHT
+        return options.copy(
+            x = position.x.coerceIn(0.0, maxOf(0.0, size.width - width)),
+            y = position.y.coerceIn(0.0, maxOf(0.0, size.height - height)),
+        )
     }
 
     private fun place(
