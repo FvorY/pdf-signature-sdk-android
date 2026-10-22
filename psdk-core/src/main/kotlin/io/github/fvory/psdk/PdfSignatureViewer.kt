@@ -32,6 +32,7 @@ import io.github.fvory.psdk.event.PsdkEvent
 import io.github.fvory.psdk.event.PsdkListener
 import io.github.fvory.psdk.event.PsdkSubscription
 import io.github.fvory.psdk.model.ItemType
+import io.github.fvory.psdk.model.toInitSignData
 import io.github.fvory.psdk.model.PageSize
 import io.github.fvory.psdk.model.PdfSource
 import io.github.fvory.psdk.model.PlaceOptions
@@ -92,6 +93,7 @@ public class PdfSignatureViewer internal constructor(
 
     private var engine: DocumentEngine? = null
     private var documentFile: File? = null
+    private var signingDocumentHash: String? = null
 
     /** Item id → PNG of its loaded image in the temp folder, kept for process-death restore. */
     private val itemImageFiles = mutableMapOf<String, String>()
@@ -197,6 +199,7 @@ public class PdfSignatureViewer internal constructor(
         }
         try {
             val file = resolver.resolve(source, config.allowInsecureHttp)
+            val sourceHash = withContext(kotlinx.coroutines.Dispatchers.IO) { signingHash(file.readBytes()) }
             val opened =
                 PasswordFlow.open(
                     open = { password -> EngineRegistry.open(file, password) },
@@ -210,6 +213,7 @@ public class PdfSignatureViewer internal constructor(
             engine = opened
             documentFile?.takeIf { it != file }?.let(temp::delete)
             documentFile = file
+            signingDocumentHash = sourceHash
             savedScroll = SavedScroll()
             val sizes = List(opened.pageCount) { opened.pageSize(it + 1) }
             pagination.setTotal(opened.pageCount)
@@ -303,6 +307,50 @@ public class PdfSignatureViewer internal constructor(
     }
 
     // ── Pages ────────────────────────────────────────────────────────────
+
+    /**
+     * Export from the loaded PDF, never from a separately supplied Base64 string.
+     * [specimenIds] maps SDK item IDs to backend specimen IDs (not demo labels).
+     * Supply exact displayed CropBox point sizes from the same PDF when the Android renderer
+     * rounds fractional page sizes. The list is 0-based; item page numbers remain 1-based.
+     */
+    @MainThread
+    public suspend fun exportInitSignDocument(
+        specimenIds: Map<String, String>,
+        exactPageSizes: List<PageSize>,
+    ): io.github.fvory.psdk.model.InitSignDocument {
+        ensureAlive()
+        check(isLoaded && !mutableState.value.isLoading) { "No PDF is ready for signing" }
+        val file = checkNotNull(documentFile)
+        val token = loadToken
+        val expectedHash = checkNotNull(signingDocumentHash)
+        val signatures = getSignatures()
+        require(signatures.isNotEmpty()) { "No signatures to export" }
+        val sizes = mutableState.value.pageSizes
+        require(exactPageSizes.size == sizes.size) { "Page count differs" }
+        val rows = signatures.map { item ->
+            require(item.page in 1..sizes.size) { "Invalid signature page" }
+            item.toInitSignData(
+                sizes[item.page - 1],
+                exactPageSizes[item.page - 1],
+                specimenIds[item.id].orEmpty(),
+            )
+        }
+        val (hash, base64) = withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val bytes = file.readBytes()
+            signingHash(bytes) to android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+        }
+        check(token == loadToken && isLoaded && !isDestroyed && !mutableState.value.isLoading) {
+            "Document changed while exporting"
+        }
+        check(hash == expectedHash) { "Loaded PDF bytes changed; reload before signing" }
+        return io.github.fvory.psdk.model.InitSignDocument(
+            base64, expectedHash, rows,
+        )
+    }
+
+    private fun signingHash(bytes: ByteArray): String =
+        java.security.MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
     /** Size of [page] in PDF points, after its `/Rotate`. */
     public fun getPageSize(page: Int): PageSize {
@@ -815,6 +863,7 @@ public class PdfSignatureViewer internal constructor(
     private fun currentPageSize(): PageSize? = mutableState.value.pageSizes.getOrNull(currentPage - 1)
 
     private fun closeEngine() {
+        signingDocumentHash = null
         engine?.close()
         engine = null
         cache.clear()
