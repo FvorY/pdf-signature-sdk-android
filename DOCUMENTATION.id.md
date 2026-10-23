@@ -185,6 +185,25 @@ PsdkConfig(defaultPosition = PlacementPosition(x = 10.0, y = 20.0)) // pojok kir
 - `null` (default) tetap menaruh item di tengah.
 - `placeSignature` / `placeEStamp` tidak terpengaruh: `x`, `y` miliknya selalu dipakai.
 
+### Tanyakan posisi lebih dulu
+
+Dengan `askPositionOnAdd` menyala, menekan tombol tambah (dan memilih peran atau opsi, jika ada picker)
+membuka dialog bawaan sebelum item ditempatkan. Dialog punya kolom **X** dan **Y** (PDF point, titik awal
+kiri atas) dan selalu mulai kosong:
+
+```kotlin
+PsdkConfig(askPositionOnAdd = true)
+// atau nanti: viewer.updateConfig { it.copy(askPositionOnAdd = true) }
+```
+
+- Kedua kolom terisi: item ditempatkan di posisi itu, tetap di dalam halaman.
+- Kedua kolom kosong: item ditempatkan di `defaultPosition`, atau di tengah halaman jika tidak diisi.
+  Pakai ini jika pengguna tidak ingin mengetik koordinat.
+- Hanya satu kolom terisi, atau bukan angka: tombol "Tempatkan" nonaktif dan dialog menjelaskan alasannya.
+- Batal (atau ketuk di luar dialog): tidak ada item yang ditambahkan.
+- Mati secara default: item langsung ditempatkan. `placeSignature` / `placeEStamp` tidak pernah menampilkan dialog.
+- Teks: `PsdkLabels.positionModalTitle`, `positionModalDesc`, `positionX`, `positionY`, `positionPageSize`, `positionInvalid` and `placeBtn`.
+
 ## 5. Mengedit di layar
 
 - Geser item untuk memindahkan; tarik pegangan di pojok kanan-bawah untuk resize (minimal 20 pt);
@@ -413,6 +432,7 @@ juga menampilkan exception-nya, dan SDK menulis detail ke Logcat.
 | `estampKeepAspectRatio` | `false` | §5 |
 | `signatureOptions`, `estampOptions`, `groupByCategory` | kosong, `false` | §10 |
 | `defaultPosition` | `null` (tengah) | §4 |
+| `askPositionOnAdd` | `false` | §4 |
 | `onUpload` | `null` (buka file pilihan) | §12 |
 | `lockScrollWhenPaginationLocked` | `false` | §8 |
 | `secureScreen` | `false` | §15 |

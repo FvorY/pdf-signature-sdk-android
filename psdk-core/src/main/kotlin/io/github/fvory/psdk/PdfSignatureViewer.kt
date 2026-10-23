@@ -7,6 +7,7 @@ import androidx.annotation.MainThread
 import io.github.fvory.psdk.cache.BitmapCache
 import io.github.fvory.psdk.cache.ImageLoader
 import io.github.fvory.psdk.config.PickerOption
+import io.github.fvory.psdk.config.PlacementPosition
 import io.github.fvory.psdk.config.PsdkConfig
 import io.github.fvory.psdk.config.PsdkThemeMode
 import io.github.fvory.psdk.config.SkeletonOptions
@@ -111,6 +112,16 @@ public class PdfSignatureViewer internal constructor(
 
     /** Which picker is open: SIGNATURE, ESTAMP or null. */
     internal val picker = MutableStateFlow<ItemType?>(null)
+
+    /** A placement waiting for the user to type its X/Y in the built-in dialog, null when none. */
+    internal data class PositionPrompt(
+        val type: ItemType,
+        val options: PlaceOptions,
+        val pageWidth: Double,
+        val pageHeight: Double,
+    )
+
+    internal val positionPrompt = MutableStateFlow<PositionPrompt?>(null)
 
     /** Skeleton overlay options while it is shown, null when hidden. */
     internal val skeleton = MutableStateFlow<SkeletonOptions?>(null)
@@ -523,6 +534,7 @@ public class PdfSignatureViewer internal constructor(
         store.clear()
         mutableItemBitmaps.value = emptyMap()
         picker.value = null
+        positionPrompt.value = null
         skeleton.value = null
         cancelPassword()
         passwordPrompt.value = null
@@ -661,7 +673,7 @@ public class PdfSignatureViewer internal constructor(
     ) {
         closePicker()
         if (isDestroyed || !isLoaded) return
-        place(type, positioned(type, PlaceOptions(label = option.label, image = option.image)))
+        startPlacement(type, PlaceOptions(label = option.label, image = option.image))
     }
 
     /** Upload button flow (B-UPL-02/03): ask `onUpload`, then open the file. Errors are only logged. */
@@ -767,18 +779,54 @@ public class PdfSignatureViewer internal constructor(
         if (isDestroyed || !isLoaded) return
         val options = if (type == ItemType.SIGNATURE) config.signatureOptions else config.estampOptions
         if (options.isEmpty()) {
-            place(type, positioned(type, PlaceOptions()))
+            startPlacement(type, PlaceOptions())
         } else {
             picker.value = type
         }
     }
 
-    /** Applies [PsdkConfig.defaultPosition] to a placement started from the UI, clamped inside the page. */
+    /**
+     * A placement started from the UI: with [PsdkConfig.askPositionOnAdd] ask for X/Y first, otherwise
+     * place it right away at [PsdkConfig.defaultPosition] or the page center.
+     */
+    private fun startPlacement(
+        type: ItemType,
+        options: PlaceOptions,
+    ) {
+        if (!config.askPositionOnAdd) {
+            place(type, positioned(type, options, config.defaultPosition))
+            return
+        }
+        val size = mutableState.value.pageSizes.getOrNull((options.page ?: currentPage) - 1) ?: return
+        positionPrompt.value = PositionPrompt(type, options, size.width, size.height)
+    }
+
+    /**
+     * The position dialog was confirmed. Both null places the item like a placement without the
+     * dialog (default position or page center); otherwise it goes to [x], [y], kept inside the page.
+     */
+    internal fun confirmPosition(
+        x: Double?,
+        y: Double?,
+    ) {
+        val pending = positionPrompt.value ?: return
+        positionPrompt.value = null
+        if (isDestroyed || !isLoaded) return
+        val position = if (x != null && y != null) PlacementPosition(x, y) else config.defaultPosition
+        place(pending.type, positioned(pending.type, pending.options, position))
+    }
+
+    internal fun cancelPositionPrompt() {
+        positionPrompt.value = null
+    }
+
+    /** Applies [position] to a placement started from the UI, clamped inside the page. */
     private fun positioned(
         type: ItemType,
         options: PlaceOptions,
+        position: PlacementPosition?,
     ): PlaceOptions {
-        val position = config.defaultPosition ?: return options
+        position ?: return options
         val sizes = mutableState.value.pageSizes
         val size = sizes.getOrNull((options.page ?: currentPage) - 1) ?: return options
         val estamp = type == ItemType.ESTAMP

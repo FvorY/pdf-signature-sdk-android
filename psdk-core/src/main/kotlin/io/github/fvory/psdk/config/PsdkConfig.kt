@@ -73,6 +73,13 @@ public data class PsdkConfig(
      * inside the page. `placeSignature` / `placeEStamp` are not affected: they use their own options.
      */
     public val defaultPosition: PlacementPosition? = null,
+    /**
+     * Ask for the position before an item from the "Add Signature" / E-Materai buttons is placed: the
+     * built-in dialog takes X and Y (PDF points, origin top-left). Both fields empty places the item
+     * at [defaultPosition] or the page center; Cancel adds nothing. Off by default: the item is
+     * placed right away. `placeSignature` / `placeEStamp` are not affected.
+     */
+    public val askPositionOnAdd: Boolean = false,
 )
 
 /** Top-left position of an item on its page, in PDF points (origin top-left, y grows downward). */

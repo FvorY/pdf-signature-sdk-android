@@ -58,6 +58,14 @@ public data class PsdkLabels(
     public val a11ySmaller: String = "Make smaller",
     public val a11yPage: String = "Page %1\$d of %2\$d",
     public val errorLoad: String = "Failed to open document",
+    public val positionModalTitle: String = "Signature position",
+    public val positionModalDesc: String =
+        "Enter the top-left corner in PDF points. Leave both empty to place it at the center of the page.",
+    public val positionX: String = "X (pt)",
+    public val positionY: String = "Y (pt)",
+    public val positionPageSize: String = "Page %1\$s x %2\$s pt",
+    public val positionInvalid: String = "Enter both X and Y as numbers, or leave both empty.",
+    public val placeBtn: String = "Place",
 ) {
     public companion object {
         /** Bahasa Indonesia preset. */
@@ -109,6 +117,13 @@ public data class PsdkLabels(
                 a11ySmaller = "Perkecil",
                 a11yPage = "Halaman %1\$d dari %2\$d",
                 errorLoad = "Gagal membuka dokumen",
+                positionModalTitle = "Posisi tanda tangan",
+                positionModalDesc = "Isi pojok kiri atas dalam PDF point. Kosongkan keduanya untuk menempatkan di tengah halaman.",
+                positionX = "X (pt)",
+                positionY = "Y (pt)",
+                positionPageSize = "Halaman %1\$s x %2\$s pt",
+                positionInvalid = "Isi X dan Y dengan angka, atau kosongkan keduanya.",
+                placeBtn = "Tempatkan",
             )
     }
 }

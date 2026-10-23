@@ -46,6 +46,7 @@ internal fun ViewerRoot(
         val picker by viewer.picker.collectAsState()
         val skeleton by viewer.skeleton.collectAsState()
         val passwordPrompt by viewer.passwordPrompt.collectAsState()
+        val positionPrompt by viewer.positionPrompt.collectAsState()
         val colors = LocalPsdkColors.current
         val upload = rememberUploadAction(viewer)
         var goToPageOpen by remember { mutableStateOf(false) }
@@ -88,6 +89,7 @@ internal fun ViewerRoot(
         }
         if (goToPageOpen) GoToPageDialog(viewer, state, config, onDismiss = { goToPageOpen = false })
         passwordPrompt?.let { PasswordDialog(viewer, it, config.labels) }
+        positionPrompt?.let { PositionDialog(viewer, it, config.labels) }
     }
 }
 
