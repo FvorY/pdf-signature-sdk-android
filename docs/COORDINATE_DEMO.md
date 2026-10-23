@@ -1,6 +1,6 @@
 # Demo Android: koordinat SDK ke Postman
 
-APK: /Users/developersign/Downloads/ezSign-Coordinate-Demo-v4.apk
+APK: sample/build/outputs/apk/debug/sample-debug.apk (hasil `./gradlew :sample:assembleDebug`)
 Nama aplikasi: ezSign Coordinate Demo
 Package: io.github.fvory.psdk.coordinates (terpisah dari PSDK Sample)
 Minimum: Android 7.0 / API 24
@@ -35,8 +35,8 @@ Validasi 22 Oktober 2026 (v4):
 - Signing di server dilakukan manual oleh pengguna; keselarasan hasil server belum diklaim terverifikasi.
 
 Build ulang:
-JAVA_HOME='/Applications/Android Studio.app/Contents/jbr/Contents/Home' \
-ANDROID_HOME=/Users/developersign/Library/Android/sdk \
+JAVA_HOME=/path/to/jdk \
+ANDROID_HOME=/path/to/android/sdk \
 ./gradlew :sample:assembleDebug :sample:testDebugUnitTest :psdk-core:testDebugUnitTest :sample:ktlintCheck
 
 ## Versi 2: validasi body Postman
