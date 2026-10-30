@@ -141,14 +141,24 @@ hanya dikirim ke origin awal, dan ukurannya dibatasi 100 MiB (PDF) serta 10 MiB 
 ## 4. Menaruh item
 
 ```kotlin
-val signatureId = viewer.placeSignature(
-    PlaceOptions(
-        page = 1, x = 72.0, y = 680.0, label = "Direktur",
-        image = PsdkImage.Url("https://example.com/signature.png"), width = 140.0,
+import io.github.fvory.psdk.event.PsdkEvent
+import io.github.fvory.psdk.model.PlaceOptions
+import io.github.fvory.psdk.model.PsdkImage
+
+viewer.once<PsdkEvent.DocumentLoaded> {
+    val signatureId = viewer.placeSignature(
+        PlaceOptions(
+            page = 1, x = 72.0, y = 680.0, label = "Direktur",
+            image = PsdkImage.Url("https://example.com/signature.png"), width = 140.0,
+        )
     )
-)
-val stampId = viewer.placeEStamp(PlaceOptions(page = 1, x = 420.0, y = 700.0))
+    val stampId = viewer.placeEStamp(PlaceOptions(page = 1, x = 420.0, y = 700.0))
+}
 ```
+
+Item hanya bisa ditaruh setelah dokumen terbuka: sebelum itu, `placeSignature` dan `placeEStamp`
+melempar `PsdkException.NotLoaded` (§16). Tunggu `DocumentLoaded` seperti di atas, atau taruh item
+setelah `loadDocument(...)` selesai.
 
 | `PlaceOptions` | Arti | Default |
 |---|---|---|
@@ -236,6 +246,8 @@ yang mengukur dari pojok kiri-bawah. `removeSignature(id)` dan `clearSignatures(
 ## 7. Event dan state
 
 ```kotlin
+import io.github.fvory.psdk.event.PsdkEvent
+
 val subscription = viewer.on<PsdkEvent.SignaturePlaced> { event ->
     Log.d("psdk", event.item.toJsonString()) // kirim ini ke backend
 }

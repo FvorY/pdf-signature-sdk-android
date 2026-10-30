@@ -144,23 +144,33 @@ times.
 ## Place items and export the result
 
 ```kotlin
-val id = viewer.placeSignature(
-    PlaceOptions(
-        page = 1,
-        x = 72.0,
-        y = 680.0,
-        label = "Director",
-        width = 140.0,
-        height = 60.0,
+import io.github.fvory.psdk.event.PsdkEvent
+import io.github.fvory.psdk.model.PlaceOptions
+import io.github.fvory.psdk.model.toJsonString
+
+viewer.once<PsdkEvent.DocumentLoaded> {
+    val id = viewer.placeSignature(
+        PlaceOptions(
+            page = 1,
+            x = 72.0,
+            y = 680.0,
+            label = "Director",
+            width = 140.0,
+            height = 60.0,
+        )
     )
-)
 
-viewer.placeEStamp(PlaceOptions(page = 1, x = 420.0, y = 700.0))
+    viewer.placeEStamp(PlaceOptions(page = 1, x = 420.0, y = 700.0))
 
-val items = viewer.getSignatures()
-val json = items.toJsonString()
-viewer.removeSignature(id)
+    val items = viewer.getSignatures()
+    val json = items.toJsonString()
+    viewer.removeSignature(id)
+}
 ```
+
+Items can be placed only after the document has loaded. Calling `placeSignature` or
+`placeEStamp` earlier, for example right after `setConfig`, throws `PsdkException.NotLoaded`.
+After `loadDocument(...)` returns, you can place items directly.
 
 Coordinates use PDF points (1/72 inch), with the page's top-left corner as `(0, 0)` and Y
 increasing downward. `page` starts at 1. A4 is commonly 595 × 842 points. The item model also
@@ -170,6 +180,8 @@ origin.
 ## Events and state
 
 ```kotlin
+import io.github.fvory.psdk.event.PsdkEvent
+
 val subscription = viewer.on<PsdkEvent.SignaturePlaced> { event ->
     Log.d("psdk", event.item.toJsonString()) // send this to your backend
 }

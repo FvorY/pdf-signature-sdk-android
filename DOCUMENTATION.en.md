@@ -141,14 +141,24 @@ the original origin, and are limited to 100 MiB (PDF) and 10 MiB (image).
 ## 4. Placing items
 
 ```kotlin
-val signatureId = viewer.placeSignature(
-    PlaceOptions(
-        page = 1, x = 72.0, y = 680.0, label = "Director",
-        image = PsdkImage.Url("https://example.com/signature.png"), width = 140.0,
+import io.github.fvory.psdk.event.PsdkEvent
+import io.github.fvory.psdk.model.PlaceOptions
+import io.github.fvory.psdk.model.PsdkImage
+
+viewer.once<PsdkEvent.DocumentLoaded> {
+    val signatureId = viewer.placeSignature(
+        PlaceOptions(
+            page = 1, x = 72.0, y = 680.0, label = "Director",
+            image = PsdkImage.Url("https://example.com/signature.png"), width = 140.0,
+        )
     )
-)
-val stampId = viewer.placeEStamp(PlaceOptions(page = 1, x = 420.0, y = 700.0))
+    val stampId = viewer.placeEStamp(PlaceOptions(page = 1, x = 420.0, y = 700.0))
+}
 ```
+
+Items can be placed only once a document is open: before that, `placeSignature` and `placeEStamp`
+throw `PsdkException.NotLoaded` (§16). Wait for `DocumentLoaded` as above, or place the items after
+`loadDocument(...)` returns.
 
 | `PlaceOptions` | Meaning | Default |
 |---|---|---|
@@ -234,6 +244,8 @@ that measure from the bottom-left corner. `removeSignature(id)` and `clearSignat
 ## 7. Events and state
 
 ```kotlin
+import io.github.fvory.psdk.event.PsdkEvent
+
 val subscription = viewer.on<PsdkEvent.SignaturePlaced> { event ->
     Log.d("psdk", event.item.toJsonString()) // send this to your backend
 }

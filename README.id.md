@@ -135,23 +135,33 @@ Download dibatasi 100 MiB untuk PDF dan 10 MiB untuk gambar; redirect divalidasi
 ## Menempatkan item dan mengirim hasil
 
 ```kotlin
-val id = viewer.placeSignature(
-    PlaceOptions(
-        page = 1,
-        x = 72.0,
-        y = 680.0,
-        label = "Direktur",
-        width = 140.0,
-        height = 60.0,
+import io.github.fvory.psdk.event.PsdkEvent
+import io.github.fvory.psdk.model.PlaceOptions
+import io.github.fvory.psdk.model.toJsonString
+
+viewer.once<PsdkEvent.DocumentLoaded> {
+    val id = viewer.placeSignature(
+        PlaceOptions(
+            page = 1,
+            x = 72.0,
+            y = 680.0,
+            label = "Direktur",
+            width = 140.0,
+            height = 60.0,
+        )
     )
-)
 
-viewer.placeEStamp(PlaceOptions(page = 1, x = 420.0, y = 700.0))
+    viewer.placeEStamp(PlaceOptions(page = 1, x = 420.0, y = 700.0))
 
-val items = viewer.getSignatures()
-val json = items.toJsonString()
-viewer.removeSignature(id)
+    val items = viewer.getSignatures()
+    val json = items.toJsonString()
+    viewer.removeSignature(id)
+}
 ```
+
+Item hanya bisa ditaruh setelah dokumen selesai dimuat. Memanggil `placeSignature` atau
+`placeEStamp` lebih awal, misalnya langsung setelah `setConfig`, melempar `PsdkException.NotLoaded`.
+Setelah `loadDocument(...)` selesai, item bisa langsung ditaruh.
 
 Koordinat memakai PDF point (1/72 inci), dengan pojok kiri-atas halaman sebagai `(0, 0)` dan
 sumbu Y ke bawah. `page` dimulai dari 1. Ukuran A4 umumnya 595 × 842 point. Model item juga
@@ -161,6 +171,8 @@ awal kiri-bawah.
 ## Event dan state
 
 ```kotlin
+import io.github.fvory.psdk.event.PsdkEvent
+
 val subscription = viewer.on<PsdkEvent.SignaturePlaced> { event ->
     Log.d("psdk", event.item.toJsonString()) // kirim ini ke backend
 }
